@@ -4,6 +4,10 @@
 
 It renders the elevated station, viaduct, roads, feeder bus hub and Park & Ride in 3D. Driverless 4-car trains run on both tracks, passengers build up on the platforms, and buses come and go. Live panels show station KPIs, train status, crowding, facilities and alerts.
 
+**Live demo: https://lrt-3d-simulation.vercel.app**
+
+![Railgrid Kelana Jaya simulation: 3D station view with KPI cards, station details panel, train tracker and train list](docs/screenshot.png)
+
 > **All data is simulated.** Nothing is pulled from Rapid KL or any live feed. The timetable, ridership and facility faults are generated in the browser so the demo has something realistic to show.
 
 ---
@@ -16,6 +20,7 @@ It renders the elevated station, viaduct, roads, feeder bus hub and Park & Ride 
 - [How the simulation works](#how-the-simulation-works)
 - [Project structure](#project-structure)
 - [Offline use](#offline-use)
+- [Deploying](#deploying)
 - [Customising](#customising)
 - [Troubleshooting](#troubleshooting)
 - [Tech stack](#tech-stack)
@@ -148,6 +153,9 @@ lrt-3d-simulation/
 │           ├── lines/          # LineSegments2.js, LineSegmentsGeometry.js, LineMaterial.js
 │           ├── renderers/      # CSS2DRenderer.js
 │           └── utils/          # BufferGeometryUtils.js
+├── docs/
+│   └── screenshot.png          # Screenshot used in this README
+├── vercel.json                 # Serves the app at the site root on Vercel
 └── README.md
 ```
 
@@ -190,6 +198,20 @@ Download the same set of files for the new version from `https://cdn.jsdelivr.ne
 Check each add-on's own `import` lines, since add-ons can depend on other add-ons. For example, `MapControls.js` needs `OrbitControls.js`.
 
 Newer versions (r171+) also split the core into `three.core.js`, which must be downloaded too.
+
+---
+
+## Deploying
+
+The app is a static site, so any static host works. It is deployed on **Vercel**:
+
+```bash
+npm i -g vercel     # once
+vercel login        # once
+vercel deploy --prod
+```
+
+`vercel.json` rewrites `/` to `railgrid-kelana-jaya.html`, so the site root opens the simulation. No build step or framework setting is needed.
 
 ---
 
