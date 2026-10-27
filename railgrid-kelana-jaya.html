@@ -1,0 +1,878 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Railgrid · Kelana Jaya</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: one station as a bright isometric diorama; white cards float over it (site panel right, tracker + live list along the bottom). */
+:root{
+  --bg:#E8EBF4; --panel:rgba(255,255,255,.96); --ink:#141A2E; --ink2:#4A5268; --ink3:#8A91A6; --line:#ECEEF4; --line2:#DFE3EC; --soft:#F5F6FA;
+  --blue:#2F54EB; --blue-soft:#EAF0FF; --green:#15803D; --green-bar:#22C55E; --green-soft:#E5F6EC; --amber:#B45309; --amber-soft:#FFF1DB;
+  --red:#DC2626; --red-soft:#FDECEC; --kj:#E0115F; --r:14px;
+  --shadow:0 10px 30px rgba(28,40,90,.10),0 1px 2px rgba(28,40,90,.06);
+  --f:"Inter",ui-sans-serif,system-ui,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--ink);font:13px/1.35 var(--f);-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+[hidden]{display:none!important}
+.num{font-variant-numeric:tabular-nums}
+#view{position:fixed;inset:0}
+#view canvas{display:block}
+.card{background:var(--panel);border:1px solid rgba(255,255,255,.9);border-radius:var(--r);box-shadow:var(--shadow);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+
+/* top bar */
+#top{position:fixed;z-index:20;top:0;left:0;right:0;height:60px;display:flex;align-items:center;gap:14px;padding:0 16px;background:rgba(255,255,255,.97);border-bottom:1px solid var(--line2)}
+.brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:19px;letter-spacing:-.02em;white-space:nowrap}
+.brand small{font-size:10px;font-weight:700;color:#fff;background:var(--kj);border-radius:5px;padding:2px 5px;margin-left:4px;vertical-align:3px;letter-spacing:.04em}
+.search{position:relative;width:340px;min-width:0;flex:0 1 340px}
+.search input{width:100%;height:38px;border:1px solid var(--line2);border-radius:10px;background:var(--soft);padding:0 34px 0 36px;outline:none}
+.search input:focus{border-color:var(--blue);background:#fff}
+.search>svg{position:absolute;left:12px;top:11px;color:var(--ink3);pointer-events:none}
+.search kbd{position:absolute;right:9px;top:9px;font:600 11px var(--f);color:var(--ink3);border:1px solid var(--line2);border-radius:5px;padding:1px 6px;background:#fff}
+.pop{position:absolute;top:calc(100% + 6px);z-index:40;background:#fff;border:1px solid var(--line2);border-radius:12px;box-shadow:0 18px 40px rgba(28,40,90,.16);padding:6px;min-width:260px;max-height:60vh;overflow:auto}
+.pop .it{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;text-align:left;padding:8px 10px;border-radius:8px}
+.pop .it:hover,.pop .it.on{background:var(--soft)}
+.pop .it small{display:block;color:var(--ink3);font-size:11px}
+.pop .hd{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);padding:8px 10px 4px}
+.spacer{flex:1}
+.site{position:relative}
+.site>button{display:flex;align-items:center;gap:10px;height:44px;border:1px solid var(--line2);border-radius:12px;background:#fff;padding:0 10px 0 6px}
+.site>button:hover{border-color:#C9CFDD}
+.site .code{background:var(--blue);color:#fff;font-weight:700;font-size:11px;border-radius:7px;padding:5px 7px}
+.site .tx{display:flex;flex-direction:column;align-items:flex-start;line-height:1.2}
+.site .tx b{font-size:13.5px}
+.site .tx span{font-size:11px;color:var(--ink3)}
+.live{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:16px;background:var(--green-soft);color:var(--green);font-weight:700;font-size:12.5px}
+.live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green-bar);box-shadow:0 0 0 3px rgba(34,197,94,.22)}
+.iconbtn{position:relative;width:38px;height:38px;border-radius:10px;border:0;background:none;display:inline-flex;align-items:center;justify-content:center;color:var(--ink2)}
+.iconbtn:hover{background:var(--soft)}
+#bellN{position:absolute;top:5px;right:6px;min-width:16px;height:16px;border-radius:8px;background:var(--red);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid #fff}
+.user{display:flex;align-items:center;gap:10px;white-space:nowrap}
+.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#2F54EB,#E0115F);color:#fff;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center}
+.user b{display:block;font-size:13px}
+.user span{display:block;font-size:11px;color:var(--ink3)}
+.alert{display:grid;grid-template-columns:8px 1fr;gap:2px 10px;padding:8px 10px;border-radius:8px}
+.alert i{width:8px;height:8px;border-radius:50%;margin-top:5px}
+.alert span{grid-column:2;color:var(--ink3);font-size:11.5px}
+
+/* KPI cards */
+#kpis{position:fixed;z-index:10;top:72px;left:16px;display:flex;gap:10px}
+.kpi{display:flex;align-items:center;gap:12px;padding:12px 16px 12px 12px;min-width:200px}
+.kpi .ic{width:42px;height:42px;border-radius:11px;background:var(--blue-soft);color:var(--blue);display:flex;align-items:center;justify-content:center;flex:none}
+.kpi label{display:block;font-size:12px;color:var(--ink2);font-weight:600}
+.kpi .v{font-size:22px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:baseline;gap:8px}
+.kpi .d{font-size:11.5px;font-weight:700;color:var(--green)}
+.kpi .d.down{color:var(--red)}
+.kpi small{display:block;font-size:11px;color:var(--ink3)}
+
+/* map controls */
+#nav{position:fixed;z-index:10;top:72px;right:368px;display:flex;flex-direction:column;padding:4px;gap:2px}
+#nav button{width:34px;height:34px;border:0;background:none;border-radius:8px;color:var(--ink2);display:flex;align-items:center;justify-content:center}
+#nav button:hover{background:var(--soft);color:var(--ink)}
+#nav button[aria-pressed="true"]{background:var(--blue);color:#fff}
+#nav hr{border:0;border-top:1px solid var(--line);margin:2px 4px;width:auto}
+
+/* right panel */
+#panel{position:fixed;z-index:10;top:72px;right:16px;width:340px;max-height:calc(100% - 72px - 236px);overflow:auto;padding:16px}
+.ph{display:flex;gap:12px;align-items:flex-start}
+.ph .ic{width:44px;height:44px;border-radius:11px;background:var(--blue-soft);color:var(--blue);display:flex;align-items:center;justify-content:center;flex:none}
+.ph .eb{font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--blue);text-transform:uppercase}
+.ph h2{margin:1px 0 0;font-size:19px;font-weight:800;letter-spacing:-.01em}
+.ph .ad{font-size:12px;color:var(--ink3)}
+.ph .act{margin-left:auto;display:flex;gap:4px}
+.ph .act button{width:30px;height:30px;border:1px solid var(--line2);border-radius:8px;background:#fff;color:var(--ink2);display:flex;align-items:center;justify-content:center}
+.ph .act button[aria-pressed="true"]{background:var(--blue);border-color:var(--blue);color:#fff}
+.prow{display:flex;align-items:center;gap:10px;margin:14px 0 12px;flex-wrap:wrap}
+.prow span.m{font-size:12px;color:var(--ink2)}
+.pill{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:7px;font-size:11.5px;font-weight:700;white-space:nowrap;background:var(--soft);color:var(--ink2)}
+.pill.ok{background:var(--green-soft);color:var(--green)}
+.pill.warn{background:var(--amber-soft);color:var(--amber)}
+.pill.bad{background:var(--red-soft);color:var(--red)}
+.pill.info{background:var(--blue-soft);color:var(--blue)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.st{background:var(--soft);border-radius:10px;padding:9px 11px}
+.st label{display:block;font-size:11px;color:var(--ink3);font-weight:600}
+.st b{display:block;font-size:17px;font-weight:800;margin-top:1px;white-space:nowrap}
+.st b small{font-size:12px;color:var(--ink3);font-weight:600}
+.bar{height:5px;border-radius:3px;background:#E3E6EE;overflow:hidden;margin-top:7px}
+.bar i{display:block;height:100%;border-radius:3px;background:var(--blue)}
+.bar i.g{background:var(--green-bar)} .bar i.a{background:#F59E0B} .bar i.r{background:var(--red)}
+.sec{margin-top:16px}
+.sec h4{display:flex;justify-content:space-between;margin:0 0 4px;font-size:12.5px;font-weight:700}
+.sec h4 span{font-weight:500;color:var(--ink3);font-size:11.5px}
+.fr{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+.fr:last-child{border-bottom:0}
+.fr .fi{width:30px;height:30px;border-radius:8px;background:var(--soft);display:flex;align-items:center;justify-content:center;color:var(--ink2);flex:none}
+.fr .nm{flex:1;min-width:0}
+.fr .nm b{display:block;font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fr .nm small{display:block;color:var(--ink3);font-size:11px}
+.fr .n{font-weight:700;min-width:38px;text-align:right}
+.fr .mb{width:64px;flex:none}
+.fr .mb .bar{margin:0}
+.fr.click{cursor:pointer;border-radius:8px}
+.fr.click:hover{background:var(--soft)}
+.dw{display:grid;grid-template-columns:repeat(4,1fr);margin:6px 0 2px;position:relative}
+.dw::before{content:"";position:absolute;left:12.5%;right:12.5%;top:8px;height:2px;background:#E3E6EE}
+.dw div{position:relative;text-align:center;font-size:10.5px;color:var(--ink3);font-weight:600}
+.dw div i{display:block;width:18px;height:18px;border-radius:50%;margin:0 auto 5px;background:#fff;border:2px solid #D4D9E4;position:relative}
+.dw div.done i{background:var(--blue);border-color:var(--blue)}
+.dw div.on i{border-color:var(--blue);box-shadow:0 0 0 4px rgba(47,84,235,.18)}
+.dw div.on{color:var(--ink)}
+.hint{color:var(--ink3);font-size:11.5px;margin-top:12px}
+
+/* tracker */
+#tracker{position:fixed;z-index:10;left:16px;bottom:16px;width:min(800px,calc(100% - 432px));display:flex;gap:16px;padding:14px 16px;align-items:stretch}
+#tracker .tl{flex:1;min-width:0}
+#tracker h3{display:flex;align-items:center;gap:8px;margin:0 0 14px;font-size:14px;font-weight:800}
+#tracker h3 .ic{color:var(--blue);display:flex}
+#tracker h3 span{margin-left:auto;font-size:12px;color:var(--ink2);font-weight:600}
+.steps{display:grid;grid-template-columns:repeat(5,1fr)}
+.step{position:relative;text-align:center;font-size:11.5px;font-weight:700;color:var(--ink2);padding-top:40px;line-height:1.25}
+.step i{position:absolute;top:0;left:50%;width:30px;height:30px;margin-left:-15px;border-radius:50%;background:#fff;border:2px solid #D4D9E4;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:10px;font-weight:800;color:var(--ink3);z-index:1}
+.step::after{content:"";position:absolute;top:14px;left:calc(50% + 15px);right:calc(-50% + 15px);height:2px;background:#E3E6EE}
+.step:last-child::after{display:none}
+.step.done i{background:var(--blue);border-color:var(--blue);color:#fff}
+.step.done::after{background:var(--blue)}
+.step.on i{border-color:var(--blue);color:var(--blue);box-shadow:0 0 0 5px rgba(47,84,235,.16);width:34px;height:34px;margin-left:-17px;top:-2px}
+.step small{display:block;font-weight:500;color:var(--ink3);font-size:10.5px;margin-top:2px}
+.step.on small{color:var(--blue);font-weight:700}
+#tcard{width:250px;flex:none;border:1px solid var(--line2);border-radius:12px;padding:12px;display:flex;gap:12px;align-items:center;background:#fff;text-align:left}
+#tcard:hover{border-color:#C9CFDD}
+#tcard .tim{width:54px;height:54px;border-radius:10px;background:linear-gradient(180deg,#FDF2F7,#F4F5FA);display:flex;align-items:center;justify-content:center;flex:none}
+#tcard b{display:block;font-size:13.5px}
+#tcard small{display:block;font-size:11.5px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tcard .pill{margin:5px 0}
+#tcard .chev{margin-left:auto;color:var(--ink3)}
+
+/* live list */
+#list{position:fixed;z-index:10;right:16px;bottom:16px;width:400px;height:208px;display:flex;flex-direction:column;overflow:hidden}
+.tabs{display:flex;align-items:center;gap:8px;padding:10px 12px 8px}
+.seg{display:inline-flex;background:var(--soft);border-radius:9px;padding:3px}
+.seg button{border:0;background:none;padding:5px 10px;border-radius:7px;font-weight:600;font-size:12px;color:var(--ink2)}
+.seg button[aria-selected="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(28,40,90,.12)}
+.seg button span{color:var(--ink3);font-weight:500;margin-left:3px}
+.tabs .where{margin-left:auto;font-size:11.5px;color:var(--ink3);font-weight:600}
+.rows{flex:1;overflow:auto;padding:0 6px 6px}
+.lr{display:grid;grid-template-columns:76px 1fr 92px 70px;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:pointer}
+.lr:hover{background:var(--soft)}
+.lr.sel{background:var(--blue-soft)}
+.lr b{display:block;font-size:12.5px}
+.lr small{display:block;font-size:10.5px;color:var(--ink3)}
+.lr .loc{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lr .loc i{width:7px;height:7px;border-radius:50%;flex:none}
+.lr .pr{font-size:11px;color:var(--ink3);text-align:right}
+.lr .pr .bar{margin:0 0 3px}
+
+/* 3D labels */
+.chip3d{transform:translateY(-14px);display:inline-flex;align-items:center;gap:6px;background:var(--blue);color:#fff;font-weight:700;font-size:12px;padding:4px 9px;border-radius:7px;box-shadow:0 6px 16px rgba(47,84,235,.35);white-space:nowrap;pointer-events:none}
+.chip3d span{font-weight:500;opacity:.85}
+.chip3d.hov{background:#fff;color:var(--ink);box-shadow:0 6px 16px rgba(28,40,90,.18)}
+.chip3d.hov span{color:var(--ink3);opacity:1}
+
+#loader{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-weight:700;color:var(--ink2);transition:opacity .4s}
+#loader .b{width:160px;height:4px;border-radius:2px;background:#D9DDE8;overflow:hidden}
+#loader .b i{display:block;width:40%;height:100%;background:var(--blue);animation:ld 1s ease-in-out infinite}
+@keyframes ld{from{transform:translateX(-100%)}to{transform:translateX(260%)}}
+#err{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:101;background:#fff;border-radius:12px;padding:16px;box-shadow:var(--shadow);max-width:420px;display:none}
+
+@media (max-width:1280px){ .kpi:nth-child(3){display:none} .user .tx{display:none} }
+@media (max-width:1000px){ #kpis,#tracker,.search{display:none} #list{left:16px;width:auto} #panel{max-height:calc(100% - 72px - 236px)} }
+@media (max-width:640px){ #panel{left:16px;width:auto;right:16px;max-height:38vh} #nav{right:16px;top:auto;bottom:236px} .site .tx span,.user{display:none} }
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="view"></div>
+
+<header id="top">
+  <div class="brand">
+    <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="8" fill="#2F54EB"/><rect x="8" y="6" width="14" height="13" rx="3.5" fill="#fff"/><rect x="10" y="9" width="10" height="4" rx="1" fill="#2F54EB"/><rect x="8" y="15" width="14" height="1.6" fill="#E0115F"/><path d="M11 19l-2 4M19 19l2 4" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+    <span>Railgrid<small>KV</small></span>
+  </div>
+  <div class="search">
+    <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Search trains, platforms, facilities…" aria-label="Search">
+    <kbd>/</kbd>
+    <div id="qres" class="pop" hidden style="left:0;width:100%"></div>
+  </div>
+  <div class="spacer"></div>
+  <div class="site">
+    <button id="siteBtn" aria-haspopup="true"><span class="code">KJ24</span><span class="tx"><b>Kelana Jaya</b><span id="siteSub">–</span></span><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+    <div id="sitePop" class="pop" hidden style="right:0"></div>
+  </div>
+  <span class="live num" id="clock">Live --:--</span>
+  <div style="position:relative">
+    <button class="iconbtn" id="bellBtn" aria-label="Alerts" aria-haspopup="true"><svg width="19" height="19" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9"/><path d="M10 20a2.2 2.2 0 0 0 4 0"/></svg><span id="bellN" hidden>0</span></button>
+    <div id="alertPop" class="pop" hidden style="right:0;width:340px"></div>
+  </div>
+  <div class="user"><div class="avatar">SC</div><div class="tx"><b>Station Control</b><span>Duty controller · KJ24</span></div></div>
+</header>
+
+<section id="kpis">
+  <div class="kpi card"><span class="ic" id="ki1"></span><div><label>Passengers in station</label><div class="v num"><span id="kv1">–</span><span class="d" id="kd1"></span></div><small>now · KJ24 Kelana Jaya</small></div></div>
+  <div class="kpi card"><span class="ic" id="ki2"></span><div><label>Trains this hour</label><div class="v num"><span id="kv2">–</span><span class="d" id="kd2"></span></div><small>both directions</small></div></div>
+  <div class="kpi card"><span class="ic" id="ki3"></span><div><label>On-time arrivals</label><div class="v num"><span id="kv3">–</span><span class="d" id="kd3"></span></div><small>today · within ±60 s</small></div></div>
+</section>
+
+<div id="nav" class="card" role="toolbar" aria-label="Map controls">
+  <button id="zIn" aria-label="Zoom in"></button><button id="zOut" aria-label="Zoom out"></button><hr>
+  <button id="rL" aria-label="Rotate left"></button><button id="rR" aria-label="Rotate right"></button><hr>
+  <button id="home" aria-label="Reset view"></button><hr>
+  <button id="cine" aria-label="Cinematic orbit" aria-pressed="false"></button>
+</div>
+
+<aside id="panel" class="card" aria-live="polite"></aside>
+
+<section id="tracker" class="card">
+  <div class="tl"><h3><span class="ic" id="trIc"></span>Train Tracker<span id="trHead"></span></h3><div class="steps" id="steps"></div></div>
+  <button id="tcard"></button>
+</section>
+
+<section id="list" class="card">
+  <div class="tabs"><div class="seg" role="tablist" id="seg"></div><span class="where">Kelana Jaya</span></div>
+  <div class="rows" id="rows"></div>
+</section>
+
+<div id="loader"><div>Loading Kelana Jaya station…</div><div class="b"><i></i></div></div>
+<div id="err"></div>
+
+<script type="importmap">
+{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/examples/jsm/"}}
+</script>
+<script>addEventListener("error",function(e){var el=document.getElementById("err");el.style.display="block";el.textContent="Railgrid hit an error: "+(e.message||e)+". Reload to try again.";});</script>
+<script type="module">
+import * as THREE from 'three';
+import { MapControls } from 'three/addons/controls/MapControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
+import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+
+/* =====================================================================
+   HELPERS, TIME, DEMAND
+   ===================================================================== */
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t;
+const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+function rng(seed){ let a=seed>>>0; return ()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}; }
+const R=rng(2024);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtN=n=>Math.round(n).toLocaleString('en-MY');
+const pct=v=>Math.round(clamp(v,0,1)*100);
+
+// Sim time t is seconds relative to page load; it runs at wall-clock speed so the "Live" clock stays honest.
+const WALL0=Date.now();
+const HM=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kuala_Lumpur',hour:'2-digit',minute:'2-digit',hour12:false});
+const HMS=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kuala_Lumpur',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+const hm=t=>HM.format(new Date(WALL0+t*1000));
+const hourOf=t=>((((WALL0/1000+t+28800)%86400)+86400)%86400)/3600;   // MYT, no DST
+const fmtDur=s=>{ s=Math.max(0,Math.round(s)); return s<60?`${s} s`:`${Math.floor(s/60)} min${s%60>=30?'':''}`; };
+const fmtDelay=d=>{ const a=Math.round(Math.abs(d)); if(a<10) return 'On time'; const m=Math.floor(a/60),s=a%60; return (d<0?'−':'+')+(m?`${m}m ${String(s).padStart(2,'0')}s`:`${s} s`); };
+
+// Weekday ridership shape (0..1) by MYT hour.
+const DEM=[[0,.12],[5.5,.12],[6,.3],[7,.9],[7.5,1],[9,.95],[10,.5],[13,.5],[14.5,.42],[16.5,.58],[17,.9],[17.5,1],[19.5,.95],[21,.45],[23,.22],[24,.12]];
+function demand(h){ for(let i=1;i<DEM.length;i++){ if(h<=DEM[i][0]){ const [h0,v0]=DEM[i-1],[h1,v1]=DEM[i]; return lerp(v0,v1,(h-h0)/(h1-h0)); } } return .12; }
+const isPeak=h=>(h>=7&&h<9.5)||(h>=17&&h<20);
+// shortcut: compressed demo timetable (75 s peak / 2 min off-peak); swap in the real GTFS feed when wiring live data.
+const headway=t=>isPeak(hourOf(t))?75:120;
+const ENTRY_RATE=.95;   // pax/s at demand 1, both platforms
+function integrate(t0,t1,f,step=60){ let s=0; for(let t=t0;t<t1;t+=step) s+=f(t)*Math.min(step,t1-t); return s; }
+const sinceSix=t=>{ const h=hourOf(t); return h>=6?(h-6)*3600:0; };
+
+/* =====================================================================
+   RENDERER, SCENE, CAMERA
+   ===================================================================== */
+const view=$('view');
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace; renderer.toneMapping=THREE.NoToneMapping;
+view.appendChild(renderer.domElement);
+const labels=new CSS2DRenderer(); labels.setSize(innerWidth,innerHeight);
+labels.domElement.style.cssText='position:absolute;inset:0;pointer-events:none'; view.appendChild(labels.domElement);
+
+const BG='#E8EBF4';
+const scene=new THREE.Scene(); scene.background=new THREE.Color(BG); scene.fog=new THREE.Fog(BG,900,2300);
+const overlay=new THREE.Scene();   // drawn after post-processing: selection brackets
+const camera=new THREE.PerspectiveCamera(28,innerWidth/innerHeight,2,6000);
+const controls=new MapControls(camera,renderer.domElement);
+controls.enableDamping=true; controls.dampingFactor=.1; controls.maxPolarAngle=1.25; controls.minDistance=30; controls.maxDistance=950; controls.screenSpacePanning=false;
+const HOME={t:[-6,6,12],r:235,az:.66,pol:.98};
+function placeCam(t,r,az,pol){ controls.target.set(...t); camera.position.set(t[0]+r*Math.sin(pol)*Math.sin(az),t[1]+r*Math.cos(pol),t[2]+r*Math.sin(pol)*Math.cos(az)); camera.lookAt(controls.target); }
+placeCam(HOME.t,HOME.r,HOME.az,HOME.pol);
+
+scene.add(new THREE.HemisphereLight('#FFFFFF','#B9C0D6',1.9));
+const sun=new THREE.DirectionalLight('#FFFFFF',2.1); sun.castShadow=true;
+sun.shadow.mapSize.set(4096,4096); Object.assign(sun.shadow.camera,{left:-300,right:300,top:300,bottom:-300,near:10,far:1400});
+sun.shadow.bias=-.0003; sun.shadow.normalBias=.4; sun.shadow.radius=4;
+scene.add(sun,sun.target);
+const SUN_OFF=new THREE.Vector3(-210,420,250);
+
+/* =====================================================================
+   MATERIALS & STATIC BATCHING
+   ===================================================================== */
+const MATS=new Map();
+function mat(c,o={}){ const k=c+JSON.stringify(o); let m=MATS.get(k); if(!m){ m=new THREE.MeshStandardMaterial({color:c,roughness:.85,metalness:0,...o}); MATS.set(k,m); } return m; }
+const C={ white:'#FFFFFF', wall:'#F6F7FB', conc:'#ECEFF5', pier:'#E4E7F0', blue:'#2B4BC4', glass:'#BFD2F4', dglass:'#26324F', road:'#DADDE8', walk:'#F3F4F8', line:'#FFFFFF', grass:'#CFE9C8', kj:'#E0115F', yellow:'#F3C22A', rail:'#8E96AA' };
+const GLASS=mat(C.glass,{transparent:true,opacity:.5,roughness:.2,metalness:.1});
+const FENCE=mat('#9FE0B4',{transparent:true,opacity:.42,roughness:.4});
+
+const BATCH=new Map();
+function put(c,g,o={}){ const m=typeof c==='string'?mat(c):c; const k=m.uuid+(o.cast===false?'n':''); let b=BATCH.get(k); if(!b) BATCH.set(k,b={m,gs:[],cast:o.cast!==false}); if(g.index) g=g.toNonIndexed(); b.gs.push(g); }
+function sb(w,h,d,c,x,y,z,ry=0,o){ const g=new THREE.BoxGeometry(w,h,d); g.translate(0,h/2,0); if(ry) g.rotateY(ry); g.translate(x,y,z); put(c,g,o); }
+function sc(r0,r1,h,c,x,y,z,seg=12,o){ const g=new THREE.CylinderGeometry(r0,r1,h,seg); g.translate(x,y+h/2,z); put(c,g,o); }
+function flush(){ for(const b of BATCH.values()){ const me=new THREE.Mesh(mergeGeometries(b.gs,false),b.m); me.castShadow=b.cast; me.receiveShadow=true; scene.add(me); } BATCH.clear(); }
+const UNIT=new THREE.BoxGeometry(1,1,1).translate(0,.5,0);
+function part(parent,w,h,d,c,x,y,z,o={}){ const m=new THREE.Mesh(UNIT,typeof c==='string'?mat(c,o.m||{}):c); m.scale.set(w,h,d); m.position.set(x,y,z); m.castShadow=o.cast!==false; m.receiveShadow=true; parent.add(m); return m; }
+
+function canvasTex(w,h,draw){ const cv=document.createElement('canvas'); cv.width=w; cv.height=h; draw(cv.getContext('2d'),w,h); const t=new THREE.CanvasTexture(cv); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=8; return t; }
+function rr(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
+function plane(w,h,tex,x,y,z,ry){ const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({map:tex,roughness:.6})); m.position.set(x,y,z); m.rotation.y=ry; scene.add(m); return m; }
+
+try{ await Promise.race([document.fonts.load('800 40px Inter'),new Promise(r=>setTimeout(r,1500))]); }catch(e){}
+
+/* =====================================================================
+   WORLD  (metres; x along the viaduct, z south, y up; station centred on 0,0)
+   ===================================================================== */
+const DECK=10, TRACK_Z={1:-5.6,2:5.6}, PLAT_Y=11.05;
+
+// ground & green verges
+{ const g=new THREE.Mesh(new THREE.PlaneGeometry(5000,5000),mat('#E9ECF5')); g.rotation.x=-Math.PI/2; g.receiveShadow=true; scene.add(g); }
+sb(1240,.05,24,C.grass,0,0,-26,0,{cast:false}); sb(1240,.05,8,C.grass,0,0,-82,0,{cast:false}); sb(1240,.05,6,C.grass,0,0,126,0,{cast:false});
+sb(500,.05,14,C.grass,-370,0,22,0,{cast:false}); sb(500,.05,14,C.grass,370,0,22,0,{cast:false});
+
+// roads
+function roadX(z,w,x0,x1,gaps=[],walk=true){
+  const m=(x0+x1)/2, L=x1-x0;
+  sb(L,.06,w,C.road,m,0,z,0,{cast:false});
+  const segs=[]; let a=x0; for(const gx of gaps.sort((p,q)=>p-q)){ segs.push([a,gx-8]); a=gx+8; } segs.push([a,x1]);
+  for(const [s0,s1] of segs){ if(s1<=s0) continue; const mm=(s0+s1)/2, ll=s1-s0;
+    for(const sd of [-1,1]){ if(walk) sb(ll,.18,3.2,C.walk,mm,0,z+sd*(w/2+1.6),0,{cast:false}); sb(ll,.02,.16,C.line,mm,.06,z+sd*(w/2-.5),0,{cast:false}); } }
+  for(let x=x0+2;x<x1-4;x+=10){ sb(4.5,.02,.18,C.line,x+2.25,.06,z,0,{cast:false}); if(w>=16) for(const sd of [-1,1]) sb(3,.02,.14,C.line,x+1.5,.06,z+sd*w/4,0,{cast:false}); }
+}
+function roadZ(x,w,z0,z1){ const m=(z0+z1)/2, L=z1-z0; sb(w,.06,L,C.road,x,0,m,0,{cast:false});
+  for(const sd of [-1,1]) sb(3.2,.18,L-8,C.walk,x+sd*(w/2+1.6),0,m,0,{cast:false});
+  for(let z=z0+3;z<z1-4;z+=10) sb(.18,.02,4.5,C.line,x,.06,z+2.25,0,{cast:false}); }
+function zebra(x,z,len){ for(let d=-len/2+1;d<=len/2-1;d+=1.1) sb(3.2,.02,.55,C.line,x,.065,z+d,0,{cast:false}); }
+roadX(110,18,-640,640,[-200,200]);
+roadX(-70,12,-640,640,[]);
+roadX(52,10,-205,205,[],false);
+sb(390,.18,3.2,C.walk,0,0,58.6,0,{cast:false});                       // south kerb of drop-off road
+sb(70,.18,3.2,C.walk,-182,0,45.4,0,{cast:false}); sb(250,.18,3.2,C.walk,70,0,45.4,0,{cast:false});
+roadZ(-200,10,57,101); roadZ(200,10,57,101);
+zebra(-4,110,18); zebra(-4,52,10); zebra(0,-70,12);
+// bus lay-by + bays
+sb(96,.06,5.2,C.road,-105,0,44.4,0,{cast:false});
+const BAYS=[-140,-118,-96,-74];
+for(const bx of BAYS){ sb(14,.02,.18,C.yellow,bx,.065,42,0,{cast:false}); sb(.18,.02,4.8,C.yellow,bx-7,.065,44.4,0,{cast:false}); sb(.18,.02,4.8,C.yellow,bx+7,.065,44.4,0,{cast:false}); }
+// bus shelter canopy
+sb(98,.06,7,C.walk,-105,.12,37.6,0,{cast:false});
+for(let x=-150;x<=-60;x+=15){ sc(.16,.16,3.6,C.blue,x,0,36,8); }
+sb(98,.35,5.2,C.white,-105,3.6,37.4); sb(98.2,.45,.14,C.blue,-105,3.55,40.05);
+for(let x=-146;x<=-66;x+=20){ sb(4,.45,.6,'#3E4A6E',x,0,35.6); }
+
+// plaza in front of Entrance A
+sb(110,.12,22,C.walk,0,0,26,0,{cast:false}); sb(40,.12,14,C.walk,0,0,-20,0,{cast:false});
+for(const x of [-40,-26,26,40]){ sb(6,.7,6,'#E2E6EF',x,0,30); }
+// station totem pylon
+sb(1.6,9,1.6,C.white,22,0,21); sb(1.62,1.8,1.62,C.kj,22,9,21);
+const pylonTex=canvasTex(128,512,(g,w,h)=>{ g.fillStyle='#fff'; g.fillRect(0,0,w,h); g.fillStyle='#E0115F'; rr(g,14,24,100,64,12); g.fill(); g.fillStyle='#fff'; g.font='800 34px Inter,Arial'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('KJ24',64,57); g.save(); g.translate(64,300); g.rotate(-Math.PI/2); g.fillStyle='#141A2E'; g.font='800 44px Inter,Arial'; g.fillText('Kelana Jaya',0,0); g.restore(); });
+plane(1.5,6.2,pylonTex,22,4.6,21.81,0); plane(1.5,6.2,pylonTex,22.81,4.6,21,Math.PI/2);
+
+// ---------- viaduct ----------
+const VX0=-460, VX1=460;
+sb(VX1-VX0,1.6,17.2,C.conc,0,DECK-1.6,0);
+for(const sd of [-1,1]){ sb(VX1-VX0,1.1,.4,C.wall,0,DECK,sd*8.4); sb(VX1-VX0,.28,.06,C.blue,0,DECK-.9,sd*8.63,0,{cast:false}); }
+for(let x=VX0+15;x<VX1;x+=30){ if(Math.abs(x)<40) continue; sb(2.2,DECK-3.2,2.2,C.pier,x,0,0); sb(3,1.6,14,C.pier,x,DECK-3.2,0); sb(3.4,.3,3.4,'#DCE0EA',x,0,0); }
+for(const k of [1,2]){ const z=TRACK_Z[k]; sb(VX1-VX0,.25,3.2,'#D7DBE6',0,DECK,z,0,{cast:false});
+  for(const s of [-.72,.72]) sb(VX1-VX0,.2,.13,C.rail,0,DECK+.25,z+s,0,{cast:false});
+  sb(VX1-VX0,.12,.42,'#C3C9D6',0,DECK+.25,z,0,{cast:false}); }   // LIM reaction rail
+
+// ---------- station: island platform, roof frame, concourse ----------
+sb(72,PLAT_Y-DECK,7,C.wall,0,DECK,0);
+for(const sd of [-1,1]){ sb(72,.02,.2,C.yellow,0,PLAT_Y,sd*3.05,0,{cast:false}); sb(72,.02,.3,'#C8CDD9',0,PLAT_Y,sd*3.35,0,{cast:false}); }
+for(const x of [-18,18]){ sb(8,.03,2.2,'#4A5470',x,PLAT_Y,0,0,{cast:false}); for(const sd of [-1,1]) sb(8,1,.06,GLASS,x,PLAT_Y,sd*1.15); }
+for(let x=-30;x<=30;x+=12){ sc(.28,.28,5.6,C.white,x,PLAT_Y,0,10); }
+for(const x of [-26,-6,6,26]){ sb(2.2,.45,.55,'#3E4A6E',x,PLAT_Y,0); }
+for(const x of [-12,12]){ sb(.14,.9,2.6,'#1B2340',x,PLAT_Y+3.6,0); sb(.1,.7,2.4,'#3B5BDB',x,PLAT_Y+3.7,0,0,{cast:false}); }
+// roof edge beams + end gables (always shown); the roof skin fades when you zoom in
+for(const sd of [-1,1]){ sb(73,.55,.35,C.blue,0,16.55,sd*10.3); sb(73,.5,.12,C.kj,0,DECK-.95,sd*8.68,0,{cast:false}); }
+for(const x of [-36.4,36.4]) for(const sd of [-1,1]) sc(.22,.22,DECK+6.6-PLAT_Y+.4,C.white,x,DECK+1.1,sd*9.8,8);
+const roofMat=new THREE.MeshStandardMaterial({color:C.blue,roughness:.7,side:THREE.DoubleSide,transparent:true,opacity:1});
+const roof=(()=>{ const sh=new THREE.Shape(); const W=10.6, rise=1.9, t=.3, N=24;
+  for(let i=0;i<=N;i++){ const u=-W+2*W*i/N; sh.lineTo(u,rise*(1-(u/W)**2)); }
+  for(let i=N;i>=0;i--){ const u=-W+2*W*i/N; sh.lineTo(u,rise*(1-(u/W)**2)+t); }
+  const g=new THREE.ExtrudeGeometry(sh,{depth:73,bevelEnabled:false}); g.rotateY(Math.PI/2); g.translate(-36.5,16.8,0);
+  const m=new THREE.Mesh(g,roofMat); m.castShadow=true; m.receiveShadow=true; scene.add(m); return m; })();
+
+// concourse block under the viaduct
+sb(64,6.4,26,C.wall,0,0,0);
+sb(64.2,.4,26.2,C.blue,0,6.4,0);
+for(const sd of [-1,1]){ for(let x=-27;x<=27;x+=9){ if(Math.abs(x)<5) continue; sb(6.6,4.2,.22,C.blue,x,1.1,sd*13.02,0,{cast:false}); sb(6,3.6,.26,'#C9D8F3',x,1.4,sd*13.03,0,{cast:false}); }
+  sb(10,3.2,.3,C.dglass,0,0,sd*13.06,0,{cast:false}); }
+for(const x of [-24,-16,16,24]) for(const sd of [-1,1]){ sb(3,.9,2,'#F0F2F7',x,6.8,sd*11); sc(.5,.5,.12,'#9AA3B8',x,7.7,sd*11,14,{cast:false}); }
+// entrances A (south) / B (north)
+for(const sd of [1,-1]){ for(const x of [-8,8]) sb(.35,4,.35,C.blue,x,0,sd*23.6); sb(18,.45,11,C.white,0,4,sd*18.5); sb(18.2,.55,.14,C.blue,0,3.95,sd*24.05); }
+const signTex=(t)=>canvasTex(1024,160,(g,w,h)=>{ g.fillStyle='#fff'; g.fillRect(0,0,w,h); g.fillStyle='#E0115F'; rr(g,24,28,152,104,18); g.fill(); g.fillStyle='#fff'; g.font='800 56px Inter,Arial'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('KJ24',100,82); g.textAlign='left'; g.fillStyle='#141A2E'; g.font='800 76px Inter,Arial'; g.fillText(t,206,70); g.font='600 30px Inter,Arial'; g.fillStyle='#6B7287'; g.fillText('LRT  ·  Laluan Kelana Jaya  ·  Kelana Jaya Line',209,128); });
+const stTex=signTex('Kelana Jaya');
+plane(19,2.97,stTex,0,15,10.46,0); plane(19,2.97,stTex,0,15,-10.46,Math.PI);
+const entTex=(l)=>canvasTex(512,96,(g,w,h)=>{ g.fillStyle='#2B4BC4'; g.fillRect(0,0,w,h); g.fillStyle='#fff'; g.font='700 46px Inter,Arial'; g.textBaseline='middle'; g.fillText(`Entrance ${l}`,24,50); g.fillStyle='#E0115F'; rr(g,w-130,18,108,60,12); g.fill(); g.fillStyle='#fff'; g.font='800 34px Inter,Arial'; g.textAlign='center'; g.fillText('KJ24',w-76,49); });
+plane(8,1.5,entTex('A'),0,5.3,24.13,0); plane(8,1.5,entTex('B'),0,5.3,-24.13,Math.PI);
+
+// ---------- Park & Ride: multi-storey (east) + surface lot (west) ----------
+const MS={x0:56,x1:172,z0:62,z1:98,lv:[0,3.4,6.8,10.2]};
+for(let i=1;i<4;i++) sb(116,.4,36,C.conc,114,MS.lv[i]-.4,80);
+sb(116,.3,36,'#E2E5EE',114,0,80,0,{cast:false});
+for(const y of MS.lv) for(const [z,w,d] of [[62,116,.3],[98,116,.3]]) { sb(w,1.05,d,C.wall,114,y,z); sb(w,.12,d+.04,C.blue,114,y+.85,z,0,{cast:false}); }
+for(const y of MS.lv) for(const x of [56,172]) { sb(.3,1.05,36,C.wall,x,y,80); }
+for(let x=60;x<=168;x+=12) for(const z of [63,80,97]) sb(.5,10.2,.5,C.conc,x,0,z);
+for(const [x,z] of [[59,65],[169,95]]) { sb(6,14.4,6,'#F1F3F8',x,0,z); sb(.15,12,1.2,'#7FA0EA',x+(x<100?-3.05:3.05),1.2,z,0,{cast:false}); sb(6.2,.4,6.2,C.blue,x,14.4,z); }
+const pkTex=canvasTex(256,256,(g,w,h)=>{ g.fillStyle='#2B4BC4'; rr(g,0,0,w,h,40); g.fill(); g.fillStyle='#fff'; g.font='800 170px Inter,Arial'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('P',w/2,h/2+8); });
+plane(4,4,pkTex,59,10,68.05,0);
+const LOT={x0:-252,x1:-158,z0:62,z1:98};
+sb(94,.05,36,'#E1E4ED',-205,0,80,0,{cast:false});
+for(const z of [64.6,71.4,88.6,95.4]) for(let x=LOT.x0+1.3;x<LOT.x1;x+=2.6) sb(.1,.02,4.6,C.line,x,.06,z,0,{cast:false});
+
+// ---------- surroundings ----------
+function block(x,z,w,d,fl){ const H=fl*3.4; sb(w,H,d,C.wall,x,0,z); for(let f=0;f<fl;f++){ sb(w+.12,1.3,d+.12,'#CFDBF3',x,f*3.4+1.2,z,0,{cast:false}); } sb(w+.4,.4,d+.4,'#E3E7F0',x,H,z); if(w>14) for(let i=0;i<3;i++) sb(3,1,2.4,'#EEF0F5',x-w/4+i*w/4,H+.4,z+(i%2?d/5:-d/5)); }
+const BL=rng(77);
+for(let x=-560;x<=560;x+=62+BL()*30){ if(BL()<.2) continue; block(x,-120-BL()*20,30+BL()*20,24+BL()*14,2+Math.floor(BL()*5)); }
+for(let x=-560;x<=560;x+=58+BL()*30){ if(BL()<.25) continue; block(x,-185-BL()*30,26+BL()*24,26+BL()*16,3+Math.floor(BL()*9)); }
+for(let x=-580;x<=580;x+=60+BL()*26){ if(Math.abs(x)<24||BL()<.2) continue; block(x,160+BL()*16,34+BL()*16,26+BL()*10,2+Math.floor(BL()*4)); }
+for(let x=-560;x<=560;x+=70+BL()*30){ if(BL()<.3) continue; block(x,230+BL()*20,30+BL()*20,30,4+Math.floor(BL()*10)); }
+for(const x of [-420,-330,330,420]) block(x,74,40,30,2+Math.floor(BL()*3));
+// fence along the north road (green glass panels, as in the reference)
+for(let x=-460;x<=460;x+=6){ sb(.14,2.2,.14,'#9AA6BC',x,0,-58); }
+sb(920,1.9,.08,FENCE,0,.2,-58,0,{cast:false});
+flush();
+
+// ---------- trees (instanced) ----------
+const TREES=[];
+for(let x=-610;x<=610;x+=16){ if(Math.abs(x-200)>10&&Math.abs(x+200)>10&&Math.abs(x+4)>8){ TREES.push([x,124.5]); TREES.push([x+8,96.5]); } TREES.push([x+4,-80]); }
+for(let x=-450;x<=450;x+=22){ if(Math.abs(x)>48) { TREES.push([x,-24]); TREES.push([x+11,-31]); } }
+for(let x=-196;x<=196;x+=14){ if(x<-150||x>-58) if(Math.abs(x+4)>6) TREES.push([x,61.5]); }
+for(const x of [-40,-26,26,40]) TREES.push([x,30]);
+for(let i=0;i<40;i++) TREES.push([-560+R()*1120,138+R()*10]);
+{ const tr=TREES.filter(([x,z])=>!(x>54&&x<174&&z>58&&z<100)&&!(x>-254&&x<-156&&z>58&&z<100));
+  const crown=new THREE.InstancedMesh(new THREE.SphereGeometry(1,18,12),mat('#FFFFFF'),tr.length);
+  const trunk=new THREE.InstancedMesh(new THREE.CylinderGeometry(.18,.24,1,6).translate(0,.5,0),mat('#D9D4CA'),tr.length);
+  const GR=['#7CCB79','#6CC06E','#8AD488','#74C672'].map(c=>new THREE.Color(c)); const m=new THREE.Matrix4(), q=new THREE.Quaternion(), s=new THREE.Vector3(), p=new THREE.Vector3();
+  tr.forEach(([x,z],i)=>{ const k=.8+R()*.5, h=3.2*k; trunk.setMatrixAt(i,m.compose(p.set(x,0,z),q,s.set(1,h,1))); crown.setMatrixAt(i,m.compose(p.set(x,h+1.6*k,z),q,s.set(2.3*k,2.9*k,2.3*k))); crown.setColorAt(i,GR[i%4]); });
+  for(const o of [crown,trunk]){ o.castShadow=true; o.receiveShadow=true; scene.add(o); } }
+
+// ---------- map pins ----------
+const PINS=[];
+function pin(x,y,z,sel){ const g=new THREE.Group(); const m=mat('#2F54EB',{roughness:.4});
+  const cone=new THREE.Mesh(new THREE.ConeGeometry(1.1,2.6,20),m); cone.rotation.x=Math.PI; cone.position.y=1.3;
+  const head=new THREE.Mesh(new THREE.SphereGeometry(1.25,20,14),m); head.position.y=3;
+  const dot=new THREE.Mesh(new THREE.SphereGeometry(.5,12,8),mat('#FFFFFF')); dot.position.set(0,3.05,.85);
+  g.add(cone,head,dot); g.traverse(o=>o.castShadow=true); g.position.set(x,y,z); g.userData={y,sel}; scene.add(g); PINS.push(g); return g; }
+pin(-12,4.6,22,{kind:'concourse'}); pin(-105,4.2,40,{kind:'bushub'}); pin(114,10.6,80,{kind:'carpark'});
+
+/* =====================================================================
+   VEHICLES
+   ===================================================================== */
+const CAR_L=12.6, GAP=.7, NCARS=4, TRAIN_L=NCARS*CAR_L+(NCARS-1)*GAP;
+const TM={ body:mat('#F7F8FA',{roughness:.45}), band:mat('#1E2A44',{roughness:.25,metalness:.2}), kj:mat(C.kj,{roughness:.5}), skirt:mat('#3B4256'), roof:mat('#DADEE8'), door:mat('#E4E7EE',{roughness:.4}), open:mat('#2A3346'), lamp:mat('#FFFFFF',{emissive:'#FFFFFF',emissiveIntensity:.6}) };
+function makeTrain(){ const g=new THREE.Group(); const leaves=[];
+  for(let i=0;i<NCARS;i++){ const c=new THREE.Group(); c.position.x=(1.5-i)*(CAR_L+GAP);
+    part(c,CAR_L-1.2,.6,2.3,TM.skirt,0,0,0); part(c,CAR_L,2.9,2.64,TM.body,0,.6,0); part(c,CAR_L-1.6,.95,2.66,TM.band,0,1.95,0,{cast:false});
+    part(c,CAR_L+.02,.3,2.67,TM.kj,0,1.15,0,{cast:false}); part(c,CAR_L-.6,.28,2.2,TM.roof,0,3.5,0);
+    for(const dx of [-3.3,3.3]){ part(c,1.6,2.2,.05,TM.open,dx,.85,-1.32,{cast:false}); for(const s of [-1,1]){ const l=part(c,.8,2.2,.06,TM.door,dx+s*.4,.85,-1.35,{cast:false}); l.userData={x0:dx+s*.4,s}; leaves.push(l); } part(c,1.6,2.2,.05,TM.door,dx,.85,1.34,{cast:false}); }
+    if(i===0||i===NCARS-1){ const e=i===0?1:-1; part(c,.12,1.25,2.2,TM.band,e*(CAR_L/2+.02),1.9,0,{cast:false}); for(const z of [-.8,.8]) part(c,.08,.22,.4,TM.lamp,e*(CAR_L/2+.04),1.1,z,{cast:false}); }
+    g.add(c); }
+  scene.add(g); return {g,leaves}; }
+
+const BUSM={ body:mat('#F7F8FA',{roughness:.45}), stripe:mat('#2B4BC4'), red:mat('#D9273A'), win:mat('#1E2A44',{roughness:.25,metalness:.2}), wheel:mat('#2A2F3B'), ac:mat('#D9DDE7') };
+const WHEEL=new THREE.CylinderGeometry(.5,.5,.3,12).rotateX(Math.PI/2);
+function makeBus(){ const g=new THREE.Group();
+  part(g,12,2.75,2.5,BUSM.body,0,.45,0); part(g,12.02,.55,2.52,BUSM.stripe,0,.75,0,{cast:false}); part(g,12.02,.12,2.52,BUSM.red,0,1.33,0,{cast:false});
+  part(g,10.4,1,2.52,BUSM.win,-.4,1.85,0,{cast:false}); part(g,.06,1.3,2.2,BUSM.win,6.01,1.6,0,{cast:false}); part(g,3.4,.4,1.6,BUSM.ac,-1,3.2,0);
+  for(const x of [-3.8,4]) for(const z of [-1.1,1.1]){ const w=new THREE.Mesh(WHEEL,BUSM.wheel); w.position.set(x,.5,z); g.add(w); }
+  scene.add(g); return g; }
+
+// instanced road cars (moving) and parked cars
+const CARCOL=['#FFFFFF','#F3F4F6','#9CA3AF','#3B4B6B','#C7D2FE','#E5E7EB','#5B6B8C','#DCE3F0','#E25563','#2B4BC4','#D1D5DB'].map(c=>new THREE.Color(c));
+const CAR_BODY=new THREE.BoxGeometry(4.3,1,1.85).translate(0,.75,0), CAR_CAB=new THREE.BoxGeometry(2.3,.75,1.62).translate(-.2,1.6,0);
+function carsIM(n){ const b=new THREE.InstancedMesh(CAR_BODY,mat('#FFFFFF',{roughness:.5}),n), c=new THREE.InstancedMesh(CAR_CAB,mat('#2C3854',{roughness:.3}),n); for(const o of [b,c]){ o.castShadow=true; o.receiveShadow=true; o.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(o); } return {b,c}; }
+const _m=new THREE.Matrix4(), _q=new THREE.Quaternion(), _s=new THREE.Vector3(1,1,1), _p=new THREE.Vector3(), _e=new THREE.Euler(), _v=new THREE.Vector3();
+function setCar(im,i,x,y,z,yaw,col){ _q.setFromEuler(_e.set(0,yaw,0)); _m.compose(_p.set(x,y,z),_q,_s.set(1,1,1)); im.b.setMatrixAt(i,_m); im.c.setMatrixAt(i,_m); if(col) im.b.setColorAt(i,col); }
+
+// parked: multi-storey (4 levels) + surface lot; each space has a fill rank so occupancy fills deterministically
+const SPACES=[];
+for(const y of MS.lv) for(const z of [65.3,71.6,88.4,94.7]) for(let x=MS.x0+3;x<MS.x1-6;x+=2.6) SPACES.push({x,y:y+(y?0:.3),z,yaw:Math.PI/2,ms:true,lv:MS.lv.indexOf(y),r:R()});
+for(const z of [64.6,71.4,88.6,95.4]) for(let x=LOT.x0+2.6;x<LOT.x1;x+=2.6) SPACES.push({x,y:.05,z,yaw:Math.PI/2,ms:false,lv:-1,r:R()});
+const MS_SPACES=SPACES.filter(s=>s.ms).length, LOT_SPACES=SPACES.length-MS_SPACES;
+const PARKED=carsIM(SPACES.length);
+SPACES.forEach((s,i)=>{ setCar(PARKED,i,s.x,s.y,s.z,s.yaw+(R()<.5?Math.PI:0),CARCOL[i%CARCOL.length]); });
+SPACES.order=SPACES.map((s,i)=>i).sort((a,b)=>SPACES[a].r-SPACES[b].r);
+
+
+
+/* =====================================================================
+   SIMULATION
+   ===================================================================== */
+const STNS={1:[['KJ26','Ara Damansara'],['KJ25','Lembah Subang'],['KJ24','Kelana Jaya'],['KJ23','Taman Bahagia'],['KJ22','Taman Paramount']],
+            2:[['KJ22','Taman Paramount'],['KJ23','Taman Bahagia'],['KJ24','Kelana Jaya'],['KJ25','Lembah Subang'],['KJ26','Ara Damansara']]};
+const PL={1:{id:1,to:'Gombak',dir:-1,wait:40,queue:[],last:null,board:0},2:{id:2,to:'Putra Heights',dir:1,wait:30,queue:[],last:null,board:0}};
+const STOP=380, EXIT=800, VMAX=20, ACC=1.0, DEC=1.1, LEG=150;      // m, m, m/s, m/s², s between stations
+const RUN_IN=(STOP-VMAX*VMAX/(2*DEC))/VMAX+VMAX/DEC;
+const CAP_T=800, CAP_STN=3000;
+const FLEET=[...Array(52)].map((_,i)=>`KJ-T${String(i+11).padStart(2,'0')}`).sort(()=>R()-.5); let fleetIx=0;
+const TRAINS=[]; const STATS={arr:0,ok:0,dep:0,flow:0,entries:0,exits:0,late:[]};
+const SIM={t:-420};
+function schedule(p,arr){ const delay=R()<.88?(R()-.5)*26:40+R()*80; p.queue.push({id:FLEET[fleetIx++%FLEET.length],pl:p.id,sched:arr,delay,spawnAt:arr-RUN_IN+delay}); }
+for(const p of Object.values(PL)){ let a=SIM.t+(p.id===1?30:105); schedule(p,a); schedule(p,a+headway(a)); }
+const DW=t=>isPeak(hourOf(t))?34:28;
+function dwellPhase(tr){ const d=tr.dt, D=tr.dw; if(d<2.5) return 0; if(d<2.5+tr.tA) return 1; if(d<D-4) return 2; return 3; }
+const PHASES=['Doors opening','Alighting','Boarding','Doors closing'];
+function spawn(q){ const p=PL[q.pl]; const h=hourOf(SIM.t); const dirBias=(q.pl===1)===(h<13)?.18:-.05;
+  const load=clamp(.25+.55*demand(h)+dirBias+(R()-.5)*.15,.08,.98);
+  const tr={...q,s:0,v:VMAX,state:'approach',dt:0,dw:DW(SIM.t),load,alight:Math.round(load*CAP_T*(.1+R()*.18)),boarded:0,tA:0,arrAt:null,depAt:null,obj:makeTrain()};
+  tr.tA=clamp(tr.alight/14,4,10); TRAINS.push(tr); }
+function stepTrain(tr,dt){
+  const p=PL[tr.pl];
+  if(tr.state==='approach'){ const d=STOP-tr.s; const vt=Math.min(VMAX,Math.sqrt(2*DEC*Math.max(0,d))); tr.v=tr.v<vt?Math.min(vt,tr.v+ACC*dt):vt; tr.v=Math.max(tr.v,d>.5?.4:0); tr.s=Math.min(STOP,tr.s+tr.v*dt);
+    if(STOP-tr.s<.05){ tr.s=STOP; tr.v=0; tr.state='dwell'; tr.dt=0; tr.arrAt=SIM.t; const late=SIM.t-tr.sched; tr.delay=late; STATS.arr++; if(Math.abs(late)<=60) STATS.ok++; else STATS.late.push({id:tr.id,pl:tr.pl,late,t:SIM.t}); STATS.flow+=tr.alight; STATS.exits+=tr.alight; tr.load=Math.max(0,tr.load-tr.alight/CAP_T); } }
+  else if(tr.state==='dwell'){ tr.dt+=dt; if(dwellPhase(tr)===2){ const n=Math.min(p.wait,10*dt,Math.max(0,(1-tr.load)*CAP_T)); p.wait-=n; tr.boarded+=n; tr.load+=n/CAP_T; }
+    if(tr.dt>=tr.dw){ tr.state='depart'; tr.depAt=SIM.t; STATS.dep++; p.last={id:tr.id,t:SIM.t,load:tr.load}; } }
+  else { tr.v=Math.min(VMAX,tr.v+ACC*dt); tr.s+=tr.v*dt; }
+}
+function simStep(dt){
+  SIM.t+=dt; const h=hourOf(SIM.t), dem=demand(h);
+  for(const p of Object.values(PL)){ while(p.queue[0].spawnAt<=SIM.t&&!TRAINS.some(t=>t.pl===p.id&&t.state!=='depart')){ spawn(p.queue.shift()); const last=p.queue[p.queue.length-1]; schedule(p,last.sched+headway(last.sched)); }
+    const share=p.id===1?(h<13?.62:.4):(h<13?.38:.6); const lam=ENTRY_RATE*dem*share; p.wait+=lam*dt; STATS.entries+=lam*dt; }
+  for(let i=TRAINS.length-1;i>=0;i--){ const tr=TRAINS[i]; stepTrain(tr,dt); if(tr.s>EXIT){ scene.remove(tr.obj.g); TRAINS.splice(i,1); } }
+  STATS.flow-=STATS.flow*dt/50; STATS.late=STATS.late.filter(l=>SIM.t-l.t<900);
+  stepBuses(dt);
+}
+const trainX=tr=>PL[tr.pl].dir*(tr.s-STOP);
+const etaOf=tr=>{ if(tr.state!=='approach') return 0; const d=STOP-tr.s, bd=tr.v*tr.v/(2*DEC); return d>bd?(d-bd)/Math.max(tr.v,1)+tr.v/DEC:Math.sqrt(2*d/DEC); };
+
+// feeder buses: drive in from the main road, pull into a bay, dwell, leave east
+const BUS_NAMES=['F1 · SS 7','F2 · Paradigm Mall','F3 · Kelana Jaya Lake','F4 · SS 4','F5 · Taman Bahagia'];
+const BUSES=[]; const bayFree=BAYS.map(()=>true);
+function busCurves(bx){ const V=(x,z)=>new THREE.Vector3(x,0,z);
+  const a=new THREE.CatmullRomCurve3([V(-660,105),V(-240,105),V(-210,103),V(-203,92),V(-203,66),V(-198,54),V(-186,50),V(bx-24,49.8),V(bx-8,45),V(bx,44.4)],false,'centripetal');
+  const b=new THREE.CatmullRomCurve3([V(bx,44.4),V(bx+10,45.5),V(bx+24,49.8),V(186,50),V(198,54),V(203,66),V(203,92),V(210,102),V(240,105),V(660,105)],false,'centripetal');
+  return [a,b]; }
+for(let i=0;i<5;i++) BUSES.push({id:`FB-0${i+1}`,name:BUS_NAMES[i],g:makeBus(),state:'off',wait:i*25+R()*20,bay:-1,u:0,cur:null,L:0,v:0,dw:0});
+function stepBuses(dt){
+  for(const b of BUSES){
+    if(b.state==='off'){ b.g.visible=false; b.wait-=dt; if(b.wait<=0){ const k=bayFree.findIndex(f=>f); if(k<0){ b.wait=10; continue; } bayFree[k]=false; b.bay=k; const [a,o]=busCurves(BAYS[k]); b.cin=a; b.cout=o; b.cur=a; b.L=a.getLength(); b.u=0; b.v=12; b.state='in'; b.g.visible=true; } continue; }
+    if(b.state==='in'){ const rem=b.L-b.u; b.v=Math.min(12,Math.max(1.2,Math.sqrt(2*1.0*rem))); b.u+=b.v*dt; if(rem<.3){ b.u=b.L; b.state='dwell'; b.dw=45+R()*60; b.dw0=b.dw; } }
+    else if(b.state==='dwell'){ b.dw-=dt; if(b.dw<=0){ b.state='out'; b.cur=b.cout; b.L=b.cout.getLength(); b.u=0; b.v=0; } }
+    else if(b.state==='out'){ b.v=Math.min(12,b.v+1.0*dt); b.u+=b.v*dt; if(b.state==='out'&&b.u>18&&b.bay>=0){ bayFree[b.bay]=true; b.bay=-1; } if(b.u>=b.L){ b.state='off'; b.wait=30+R()*50; } }
+  }
+}
+function placeBus(b){ if(b.state==='off') return; const u=clamp(b.u/b.L,0,1); b.cur.getPointAt(u,_v); b.g.position.set(_v.x,.05,_v.z); const tg=b.cur.getTangentAt(Math.min(u,.999)); b.g.rotation.y=Math.atan2(-tg.z,tg.x); }
+
+// warm-up so the station is mid-service on load
+while(SIM.t<0) simStep(.25);
+STATS.arr=0; STATS.ok=0; STATS.dep=0; STATS.late=[];
+// totals before page load come from the demand curve
+const BASE={ entries:integrate(-sinceSix(0),0,t=>ENTRY_RATE*demand(hourOf(t))), deps:integrate(-sinceSix(0),0,t=>2/headway(t)) };
+BASE.arr=Math.round(BASE.deps); BASE.ok=Math.round(BASE.arr*.982);
+STATS.entries=0; STATS.exits=0;
+const carOcc=h=>clamp(h<6?.12:h<9.5?lerp(.15,.95,(h-6)/3.5):h<17?.95:h<20.5?lerp(.95,.4,(h-17)/3.5):lerp(.4,.15,(h-20.5)/3.5),0,1);
+
+/* =====================================================================
+   SELECTION, PICKING, CAMERA
+   ===================================================================== */
+const B3=(a,b)=>new THREE.Box3(new THREE.Vector3(...a),new THREE.Vector3(...b));
+const ZONES=[
+  {kind:'station',pr:1,box:B3([-37,DECK-2,-11],[37,19,11])},
+  {kind:'platform',id:1,pr:3,box:B3([-36,DECK,-8],[36,15,0])},
+  {kind:'platform',id:2,pr:3,box:B3([-36,DECK,0],[36,15,8])},
+  {kind:'concourse',pr:2,box:B3([-33,0,-25],[33,7.5,25])},
+  {kind:'bushub',pr:2,box:B3([-156,0,32],[-54,4.5,48])},
+  {kind:'carpark',pr:2,box:B3([54,0,60],[174,15,100])},
+  {kind:'carpark',pr:2,box:B3([-254,0,60],[-156,2.5,100])},
+];
+const FOCUS={ station:{t:[-6,6,12],r:235}, platform:{t:[0,11,0],r:125}, concourse:{t:[0,3,16],r:130}, bushub:{t:[-105,2,42],r:160}, carpark:{t:[100,5,80],r:220}, train:{r:130} };
+let SEL={kind:'station'}, FOLLOW=true;
+const sameSel=(a,b)=>a&&b&&a.kind===b.kind&&a.id===b.id;
+function selBox(s,out=new THREE.Box3()){
+  if(s.kind==='train'){ const tr=TRAINS.find(t=>t.id===s.id); return tr?out.setFromObject(tr.obj.g):null; }
+  if(s.kind==='bus'){ const b=BUSES.find(b=>b.id===s.id); return b&&b.state!=='off'?out.setFromObject(b.g):null; }
+  const z=ZONES.find(z=>z.kind===s.kind&&(z.id===undefined||z.id===s.id)); return z?out.copy(z.box):null; }
+
+let fly=null;
+function sph(){ const o=controls.target, d=_v.copy(camera.position).sub(o); const r=d.length(); return {r,az:Math.atan2(d.x,d.z),pol:Math.acos(clamp(d.y/r,-1,1))}; }
+function flyTo(t,r,az,pol,dur=1.1){ const s=sph(); let a1=az??s.az; while(a1-s.az>Math.PI) a1-=2*Math.PI; while(a1-s.az<-Math.PI) a1+=2*Math.PI;
+  fly={t0:controls.target.clone(),t1:new THREE.Vector3(...t),r0:s.r,r1:r??s.r,a0:s.az,a1,p0:s.pol,p1:pol??s.pol,k:0,dur}; }
+function select(s,{move=true}={}){
+  SEL=s; FOLLOW=true; closePops();
+  if(move){ if(s.kind==='train'){ const tr=TRAINS.find(t=>t.id===s.id); if(tr){ const b=selBox(s); const c=b.getCenter(new THREE.Vector3()); flyTo([c.x,c.y,c.z],FOCUS.train.r); } }
+    else if(s.kind==='bus'){ const b=selBox(s); if(b){ const c=b.getCenter(new THREE.Vector3()); flyTo([c.x,0,c.z],120); } }
+    else { const f=FOCUS[s.kind]; const t=s.kind==='platform'?[0,11,s.id===1?-3:3]:f.t; flyTo(t,f.r); } }
+  renderUI(true);
+}
+
+// selection brackets (overlay) + floor glow + chips
+const bMat=new LineMaterial({color:0x2F54EB,linewidth:2.6,depthTest:false,transparent:true}); bMat.resolution.set(innerWidth,innerHeight);
+const bracket=new LineSegments2(new LineSegmentsGeometry(),bMat); bracket.frustumCulled=false; overlay.add(bracket);
+function setBracket(b){ const pts=[], mn=b.min, mx=b.max, sz=b.getSize(_v); const L=Math.max(1.2,Math.min(sz.x,sz.y*1.6,sz.z)*.3);
+  for(const x of [mn.x,mx.x]) for(const y of [mn.y,mx.y]) for(const z of [mn.z,mx.z]){ const sx=x===mn.x?1:-1, sy=y===mn.y?1:-1, sz2=z===mn.z?1:-1;
+    pts.push(x,y,z,x+sx*L,y,z, x,y,z,x,y+sy*L,z, x,y,z,x,y,z+sz2*L); }
+  bracket.geometry.dispose(); bracket.geometry=new LineSegmentsGeometry().setPositions(pts); }
+const glow=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({color:'#3B5BDB',transparent:true,opacity:.16,depthWrite:false}));
+glow.rotation.x=-Math.PI/2; glow.renderOrder=2; scene.add(glow);
+function chip(cls){ const el=document.createElement('div'); el.className='chip3d '+cls; const o=new CSS2DObject(el); o.center.set(.5,1); scene.add(o); return o; }
+const selChip=chip(''), hovChip=chip('hov');
+
+const ray=new THREE.Raycaster(), ndc=new THREE.Vector2(), _hit=new THREE.Vector3(), _bx=new THREE.Box3();
+function pick(cx,cy){ const r=renderer.domElement.getBoundingClientRect(); ndc.set((cx-r.left)/r.width*2-1,-(cy-r.top)/r.height*2+1); ray.setFromCamera(ndc,camera);
+  let best=null; const test=(sel,box,pr)=>{ if(ray.ray.intersectBox(box,_hit)){ const d=_hit.distanceTo(ray.ray.origin); if(!best||pr>best.pr||(pr===best.pr&&d<best.d)) best={sel,pr,d}; } };
+  for(const tr of TRAINS) test({kind:'train',id:tr.id},_bx.setFromObject(tr.obj.g).expandByScalar(.5),5);
+  for(const b of BUSES) if(b.state!=='off') test({kind:'bus',id:b.id},_bx.setFromObject(b.g).expandByScalar(.4),5);
+  for(const p of PINS) test(p.userData.sel,_bx.setFromObject(p).expandByScalar(1),4);
+  for(const z of ZONES) test(z.id?{kind:z.kind,id:z.id}:{kind:z.kind},z.box,z.pr);
+  return best?.sel||null; }
+let down=null, hov=null;
+renderer.domElement.addEventListener('pointerdown',e=>{ down=[e.clientX,e.clientY]; fly=null; });
+renderer.domElement.addEventListener('pointerup',e=>{ if(down&&Math.hypot(e.clientX-down[0],e.clientY-down[1])<5){ const s=pick(e.clientX,e.clientY); if(s) select(s); } down=null; });
+let hovT=0; renderer.domElement.addEventListener('pointermove',e=>{ const now=performance.now(); if(now-hovT<60) return; hovT=now; hov=pick(e.clientX,e.clientY); renderer.domElement.style.cursor=hov?'pointer':''; });
+renderer.domElement.addEventListener('pointerleave',()=>{ hov=null; });
+controls.addEventListener('start',()=>{ if(SEL.kind==='train'||SEL.kind==='bus') FOLLOW=false; });
+
+function nameOf(s){ if(!s) return ['','']; if(s.kind==='train'){ const tr=TRAINS.find(t=>t.id===s.id); return [s.id,tr?trainStatus(tr)[0]:'']; }
+  if(s.kind==='bus'){ const b=BUSES.find(b=>b.id===s.id); return [s.id,b?busStatus(b):'']; }
+  return {station:['KJ24 Kelana Jaya','Station'],platform:[`Platform ${s.id}`,`to ${PL[s.id]?.to}`],concourse:['Concourse','Entrances A · B'],bushub:['Feeder bus hub',`${bayFree.filter(f=>!f).length}/4 bays`],carpark:['Park & Ride',`${pct(carOcc(hourOf(SIM.t)))}% full`]}[s.kind]; }
+
+/* =====================================================================
+   UI
+   ===================================================================== */
+const I={
+  train:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="13" rx="3"/><path d="M5 10h14M8 20l2-4M16 20l-2-4"/><circle cx="9" cy="13" r=".8" fill="currentColor"/><circle cx="15" cy="13" r=".8" fill="currentColor"/></svg>',
+  users:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><path d="M3 19c0-3.3 2.7-5 6-5s6 1.7 6 5"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.2c2.9.2 5 1.8 5 4.8"/></svg>',
+  clock:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
+  station:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M2.5 10 12 4.5l9.5 5.5"/><path d="M5 10v9.5h14V10"/><path d="M9 19.5V14h6v5.5"/></svg>',
+  platform:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="4" width="12" height="9" rx="2.5"/><path d="M3 16.5h18M3 20h18"/></svg>',
+  bus:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="4" width="16" height="13" rx="2.5"/><path d="M4 11h16M7.5 20v-3M16.5 20v-3"/></svg>',
+  car:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 16v-5l2.2-4h9.6L19 11v5"/><path d="M3.5 16h17"/><circle cx="7.5" cy="16.5" r="1.7"/><circle cx="16.5" cy="16.5" r="1.7"/></svg>',
+  esc:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19h4.5L16 8h5"/><path d="M5 15.5 13.5 5"/></svg>',
+  lift:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="m9 10 2-2.5 2 2.5M11 16l2 2.5 2-2.5"/></svg>',
+  gate:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V8M12 20V8M19 20V8M5 12h4.5M12 12h4.5"/></svg>',
+  ticket:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 7h7M8.5 11h7M10 16h4"/></svg>',
+  plus:'<svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  minus:'<svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  rotL:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.5A5 5 0 1 1 5 11.5"/><path d="M3 3.5v4h4"/></svg>',
+  rotR:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 7.5A5 5 0 1 0 11 11.5"/><path d="M13 3.5v4H9"/></svg>',
+  home:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M2.5 7.5 8 3l5.5 4.5V13H2.5Z"/></svg>',
+  target:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="4.5"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>',
+  close:'<svg width="14" height="14" viewBox="0 0 16 16"><path d="m4 4 8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  chev:'<svg width="16" height="16" viewBox="0 0 16 16"><path d="m6 3.5 4.5 4.5L6 12.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  tram:'<svg width="40" height="22" viewBox="0 0 40 22"><rect x="1" y="2" width="38" height="15" rx="4" fill="#fff" stroke="#C9CFDD"/><rect x="4" y="5" width="32" height="5" rx="1.5" fill="#1E2A44"/><rect x="1" y="11.5" width="38" height="2" fill="#E0115F"/><circle cx="9" cy="19" r="2" fill="#3B4256"/><circle cx="31" cy="19" r="2" fill="#3B4256"/></svg>',
+};
+$('ki1').innerHTML=I.users; $('ki2').innerHTML=I.train; $('ki3').innerHTML=I.clock; $('trIc').innerHTML=I.train;
+$('zIn').innerHTML=I.plus; $('zOut').innerHTML=I.minus; $('rL').innerHTML=I.rotL; $('rR').innerHTML=I.rotR; $('home').innerHTML=I.home; $('cine').innerHTML=I.rotR;
+
+// facilities (static state; would come from the SCADA/maintenance feed)
+const FAC=[
+  {id:'E1',type:'esc',name:'Escalator E1',where:'Entrance A → concourse',ok:true},
+  {id:'E2',type:'esc',name:'Escalator E2',where:'Concourse → Entrance A',ok:true},
+  {id:'E3',type:'esc',name:'Escalator E3',where:'Concourse → platform',ok:true},
+  {id:'E4',type:'esc',name:'Escalator E4',where:'Platform → concourse',ok:false,note:'Scheduled maintenance'},
+  {id:'E5',type:'esc',name:'Escalator E5',where:'Entrance B → concourse',ok:true},
+  {id:'E6',type:'esc',name:'Escalator E6',where:'Concourse → Entrance B',ok:true},
+  {id:'L1',type:'lift',name:'Lift L1',where:'Street ↔ concourse',ok:true},
+  {id:'L2',type:'lift',name:'Lift L2',where:'Concourse ↔ platform',ok:true},
+  ...[...Array(16)].map((_,i)=>({id:`G${i+1}`,type:'gate',name:`Fare gate ${i+1}`,where:'Paid area',ok:i!==11,note:i===11?'Card reader fault':''})),
+  ...[...Array(6)].map((_,i)=>({id:`T${i+1}`,type:'ticket',name:`Ticket machine ${i+1}`,where:'Concourse',ok:true})),
+];
+const facCount=t=>{ const f=FAC.filter(x=>x.type===t); return [f.filter(x=>x.ok).length,f.length]; };
+const FAC_GROUPS=[['esc','Escalators'],['lift','Lifts'],['gate','Fare gates'],['ticket','Ticket machines']];
+
+function trainStatus(tr){ if(tr.state==='approach') return ['Arriving','info']; if(tr.state==='dwell') return [PHASES[dwellPhase(tr)],dwellPhase(tr)===2?'ok':'info']; return ['Departed','']; }
+function busStatus(b){ return {in:'Arriving',dwell:'At bay',out:'Departing',off:'En route'}[b.state]; }
+const inStation=()=>PL[1].wait+PL[2].wait+STATS.flow+ENTRY_RATE*demand(hourOf(SIM.t))*45;
+const busyPl=()=>[1,2].filter(k=>TRAINS.some(t=>t.pl===k&&(t.state==='dwell'||(t.state==='approach'&&etaOf(t)<45)))).length;
+const crowd=w=>w<120?['Normal','ok']:w<260?['Busy','warn']:['Crowded','bad'];
+const trainsInHour=t=>Math.round(integrate(t-3600,t,x=>2/headway(x)));
+function alerts(){ const a=[]; for(const f of FAC) if(!f.ok) a.push({c:'#F59E0B',t:`${f.name} out of service`,s:`${f.where} · ${f.note||''}`});
+  for(const l of STATS.late) a.push({c:'#DC2626',t:`${l.id} arrived ${fmtDelay(l.late)} late`,s:`Platform ${l.pl} · ${hm(l.t)}`});
+  for(const k of [1,2]) if(PL[k].wait>=260) a.push({c:'#DC2626',t:`Platform ${k} crowded`,s:`${fmtN(PL[k].wait)} waiting`}); return a; }
+
+const stat=(label,val,frac,cls='')=>`<div class="st"><label>${label}</label><b class="num">${val}</b>${frac==null?'':`<div class="bar"><i class="${cls}" style="width:${pct(frac)}%"></i></div>`}</div>`;
+const head=(eb,title,sub,icon,act='')=>`<div class="ph"><span class="ic">${icon}</span><div style="min-width:0"><div class="eb">${eb}</div><h2>${esc(title)}</h2><div class="ad">${sub}</div></div><div class="act">${act}</div></div>`;
+const fr=(icon,name,sub,n,pillTxt,pillCls,attrs='')=>`<div class="fr${attrs?' click':''}" ${attrs}><span class="fi">${icon}</span><span class="nm"><b>${name}</b>${sub?`<small>${sub}</small>`:''}</span><span class="n num">${n}</span>${pillTxt?`<span class="pill ${pillCls}">${pillTxt}</span>`:''}</div>`;
+function nextTrainRows(){ return [1,2].map(k=>{ const tr=TRAINS.filter(t=>t.pl===k&&t.state!=='depart').sort((a,b)=>b.s-a.s)[0]; const q=PL[k].queue[0];
+  if(tr){ const [st,cls]=trainStatus(tr); const prog=tr.state==='dwell'?tr.dt/tr.dw:clamp(tr.s/STOP,0,1);
+    return `<div class="fr click" data-sel="train:${tr.id}"><span class="fi">${I.train}</span><span class="nm"><b>${tr.id} → ${PL[k].to}</b><small>Platform ${k} · ${tr.state==='dwell'?`${Math.ceil(tr.dw-tr.dt)} s to departure`:`arrives in ${fmtDur(etaOf(tr))}`}</small></span><span class="mb"><div class="bar"><i class="${tr.state==='dwell'?'g':''}" style="width:${pct(prog)}%"></i></div></span><span class="pill ${cls}">${st}</span></div>`; }
+  return `<div class="fr"><span class="fi">${I.train}</span><span class="nm"><b>${q.id} → ${PL[k].to}</b><small>Platform ${k} · due ${hm(q.sched)}</small></span><span class="pill">En route</span></div>`; }).join(''); }
+
+function panelHTML(){
+  const h=hourOf(SIM.t);
+  if(SEL.kind==='station'){ const n=inStation(), busy=busyPl();
+    return head('LRT Station · KJ24','Kelana Jaya','Kelana Jaya Line · Petaling Jaya, Selangor',I.station)
+      +`<div class="prow"><span class="pill ok">Operational</span><span class="m">${busy}/2 platforms busy · ${TRAINS.filter(t=>t.state==='approach').length} arriving · ${trainsInHour(SIM.t)} trains/hr</span></div>`
+      +`<div class="grid">${stat('Passengers in station',`${fmtN(n)} <small>/ ${fmtN(CAP_STN)}</small>`,n/CAP_STN)}${stat('Platforms busy',`${busy} <small>/ 2</small>`,busy/2,'g')}${stat('Departures today',fmtN(BASE.deps+STATS.dep))}${stat('Entries today',fmtN(BASE.entries+STATS.entries))}</div>`
+      +`<div class="sec"><h4>Facilities<span>units in service</span></h4>${FAC_GROUPS.map(([t,l])=>{ const [a,b]=facCount(t); return fr(I[t],l,'',`${a}/${b}`,a===b?'In service':`${b-a} out`,a===b?'ok':'warn','data-sel="concourse"'); }).join('')}</div>`
+      +`<div class="sec"><h4>Next trains<span>both platforms</span></h4>${nextTrainRows()}</div>`; }
+  if(SEL.kind==='platform'){ const p=PL[SEL.id]; const [cw,cc]=crowd(p.wait); const tr=TRAINS.filter(t=>t.pl===p.id&&t.state!=='depart').sort((a,b)=>b.s-a.s)[0]; const q=p.queue[0];
+    return head(`Platform ${p.id} · KJ24`,`To ${p.to}`,`Island platform · ${p.id===1?'Track 1 (northbound)':'Track 2 (southbound)'}`,I.platform,`<button data-x aria-label="Back to station">${I.close}</button>`)
+      +`<div class="prow"><span class="pill ${cc}">${cw}</span><span class="m">${tr?`${tr.id} ${trainStatus(tr)[0].toLowerCase()}`:`next train ${hm(q.sched)}`}</span></div>`
+      +`<div class="grid">${stat('Waiting now',fmtN(p.wait),p.wait/400,p.wait>=260?'r':p.wait>=120?'a':'g')}${stat('Headway',`${Math.round(headway(SIM.t)/60*10)/10} <small>min</small>`)}${stat('Next train',tr?(tr.state==='dwell'?'Boarding':fmtDur(etaOf(tr))):hm(q.sched))}${stat('Last departure',p.last?hm(p.last.t):'–')}</div>`
+      +`<div class="sec"><h4>Upcoming<span>scheduled</span></h4>${[tr,...p.queue].filter(Boolean).slice(0,3).map(x=>x.obj?fr(I.train,x.id,`${x.state==='dwell'?'At platform':'Arriving'} · ${Math.round(x.load*100)}% load`,hm(x.sched),trainStatus(x)[0],trainStatus(x)[1],`data-sel="train:${x.id}"`):fr(I.train,x.id,`From ${STNS[p.id][1][1]}`,hm(x.sched),'En route','')).join('')}</div>`
+      +`<div class="sec"><h4>Facilities on platform</h4>${FAC.filter(f=>f.id==='E3'||f.id==='E4'||f.id==='L2').map(f=>fr(I[f.type],f.name,f.where,'',f.ok?'Running':'Maintenance',f.ok?'ok':'warn')).join('')}</div>`; }
+  if(SEL.kind==='train'){ const tr=TRAINS.find(t=>t.id===SEL.id); const q=[...PL[1].queue,...PL[2].queue].find(x=>x.id===SEL.id);
+    if(!tr&&!q){ SEL={kind:'station'}; return panelHTML(); }
+    const act=`<button data-follow aria-pressed="${FOLLOW}" aria-label="Follow train">${I.target}</button><button data-x aria-label="Back to station">${I.close}</button>`;
+    if(!tr) return head('Kelana Jaya Line · 4 cars',q.id,`To ${PL[q.pl].to} · driverless`,I.train,`<button data-x aria-label="Back to station">${I.close}</button>`)+`<div class="prow"><span class="pill">En route</span><span class="m">Due at Platform ${q.pl} ${hm(q.sched)}</span></div><p class="hint">This train is still between stations. It appears on the viaduct about 30 s before arrival.</p>`;
+    const [st,cls]=trainStatus(tr); const ph=tr.state==='dwell'?dwellPhase(tr):-1;
+    return head('Kelana Jaya Line · 4 cars',tr.id,`To ${PL[tr.pl].to} · driverless (UTO)`,I.train,act)
+      +`<div class="prow"><span class="pill ${cls}">${st}</span><span class="m">Platform ${tr.pl} · ${tr.state==='dwell'?`${Math.ceil(tr.dw-tr.dt)} s left`:tr.state==='approach'?`in ${fmtDur(etaOf(tr))}`:`left ${hm(tr.depAt)}`}</span></div>`
+      +`<div class="grid">${stat('Speed',`${Math.round(tr.v*3.6)} <small>km/h</small>`,tr.v/VMAX)}${stat('Load',`${pct(tr.load)}<small>%</small>`,tr.load,tr.load>.85?'r':tr.load>.65?'a':'g')}${stat('Delay',tr.arrAt!=null?fmtDelay(tr.delay):fmtDelay(tr.delay))}${stat('Scheduled',hm(tr.sched))}</div>`
+      +(ph>=0?`<div class="sec"><h4>Dwell at KJ24<span>${Math.ceil(tr.dw-tr.dt)} s left</span></h4><div class="dw">${PHASES.map((p,i)=>`<div class="${i<ph?'done':i===ph?'on':''}"><i></i>${p.replace('Doors ','')}</div>`).join('')}</div></div>`:'')
+      +`<div class="sec"><h4>Passengers</h4>${fr(I.users,'Alighted here','',fmtN(tr.arrAt!=null?tr.alight:0),'',' ')}${fr(I.users,'Boarded here','',fmtN(tr.boarded),'',' ')}</div>`; }
+  if(SEL.kind==='concourse'){ const n=STATS.flow+ENTRY_RATE*demand(h)*45;
+    return head('Concourse · KJ24','Concourse & entrances','Paid & unpaid areas · Entrances A (south), B (north)',I.station,`<button data-x aria-label="Back to station">${I.close}</button>`)
+      +`<div class="prow"><span class="pill ok">Open</span><span class="m">${Math.round(ENTRY_RATE*demand(h)*60)} gate taps/min</span></div>`
+      +`<div class="grid">${stat('In concourse',fmtN(n))}${stat('Exits today',fmtN(BASE.entries*.97+STATS.exits))}</div>`
+      +`<div class="sec"><h4>Facilities<span>${FAC.filter(f=>f.ok).length}/${FAC.length} in service</span></h4>${FAC.filter(f=>f.type==='esc'||f.type==='lift'||!f.ok).map(f=>fr(I[f.type],f.name,f.ok?f.where:f.note,'',f.ok?'Running':'Out of service',f.ok?'ok':'warn')).join('')}${fr(I.gate,'Fare gates','Paid area',facCount('gate').join('/'),'In service','ok')}${fr(I.ticket,'Ticket machines','Concourse',facCount('ticket').join('/'),'In service','ok')}</div>`; }
+  if(SEL.kind==='bushub'||SEL.kind==='bus'){ const used=bayFree.filter(f=>!f).length;
+    return head('Feeder bus hub · KJ24','Feeder bus hub','Bus lay-by beside Entrance A · 4 bays',I.bus,`<button data-x aria-label="Back to station">${I.close}</button>`)
+      +`<div class="prow"><span class="pill ok">Operational</span><span class="m">${used}/4 bays in use</span></div>`
+      +`<div class="grid">${stat('Bays in use',`${used} <small>/ 4</small>`,used/4)}${stat('Waiting at shelter',fmtN(12+demand(h)*40))}</div>`
+      +`<div class="sec"><h4>Buses<span>simulated</span></h4>${BUSES.map(b=>fr(I.bus,`${b.id} · ${b.name.split(' · ')[0]}`,b.name.split(' · ')[1],b.state==='dwell'?`${Math.ceil(b.dw)} s`:'',busStatus(b),b.state==='dwell'?'ok':b.state==='off'?'':'info',b.state!=='off'?`data-sel="bus:${b.id}"`:'')).join('')}</div>`; }
+  if(SEL.kind==='carpark'){ const o=carOcc(h); const msUsed=Math.round(o*MS_SPACES), lotUsed=Math.round(Math.min(1,o*1.05)*LOT_SPACES);
+    return head('Park & Ride · KJ24','Park & Ride','Multi-storey (4 levels) + surface lot',I.car,`<button data-x aria-label="Back to station">${I.close}</button>`)
+      +`<div class="prow"><span class="pill ${o>.9?'warn':'ok'}">${o>.9?'Nearly full':'Spaces available'}</span><span class="m">${fmtN(MS_SPACES+LOT_SPACES-msUsed-lotUsed)} free</span></div>`
+      +`<div class="grid">${stat('Multi-storey',`${fmtN(msUsed)} <small>/ ${fmtN(MS_SPACES)}</small>`,msUsed/MS_SPACES,o>.9?'a':'')}${stat('Surface lot',`${fmtN(lotUsed)} <small>/ ${fmtN(LOT_SPACES)}</small>`,lotUsed/LOT_SPACES,o>.9?'a':'')}</div>`
+      +`<div class="sec"><h4>Levels</h4>${[0,1,2,3].map(l=>{ const f=clamp(o*1.12-l*.06,0,1); return fr(I.car,l===0?'Ground':l===3?'Roof':`Level ${l}`,'',`${pct(f)}%`,f>.95?'Full':'Open',f>.95?'warn':'ok'); }).join('')}</div>`; }
+  return '';
+}
+
+// tracker: the selected train, else the train that is (or is about to be) at the platform
+function trackerTrain(){ if(SEL.kind==='train'){ const tr=TRAINS.find(t=>t.id===SEL.id)||[...PL[1].queue,...PL[2].queue].find(x=>x.id===SEL.id); if(tr) return tr; }
+  const p=SEL.kind==='platform'?SEL.id:null; const c=TRAINS.filter(t=>t.state!=='depart'&&(!p||t.pl===p)).sort((a,b)=>(a.state==='dwell'?-1:etaOf(a))-(b.state==='dwell'?-1:etaOf(b)));
+  return c[0]||(p?PL[p].queue[0]:[PL[1].queue[0],PL[2].queue[0]].sort((a,b)=>a.sched-b.sched)[0]); }
+function renderTracker(){ const tr=trackerTrain(); if(!tr) return; const st=STNS[tr.pl]; const live=!!tr.obj; const T0=tr.sched+(tr.delay||0);
+  const stepT=k=>k<2?T0-(2-k)*LEG:k===2?T0:(tr.depAt??(T0+(tr.dw||30)))+(k-2)*LEG;
+  let on; if(!live) on=SIM.t<T0-LEG?1:2; else if(tr.state==='approach'||tr.state==='dwell') on=2; else on=3;
+  $('trHead').textContent=`${tr.id} · to ${PL[tr.pl].to}`;
+  $('steps').innerHTML=st.map(([code,name],k)=>{ const cls=k<on?'done':k===on?'on':''; let sub=hm(stepT(k));
+    if(k===2&&on===2) sub=tr.state==='dwell'?`${PHASES[dwellPhase(tr)]} ${dwellPhase(tr)+1}/4`:`ETA ${hm(SIM.t+(live?etaOf(tr):T0-SIM.t))}`;
+    return `<div class="step ${cls}"><i>${k<on?'✓':code.slice(2)}</i>${esc(name)}<small>${k===on&&k!==2?'Next · ':''}${sub}</small></div>`; }).join('');
+  const [s,cls]=live?trainStatus(tr):['En route',''];
+  $('tcard').dataset.sel=`train:${tr.id}`;
+  $('tcard').innerHTML=`<span class="tim">${I.tram}</span><span style="min-width:0"><b>#${tr.id}</b><small>To: ${PL[tr.pl].to}</small><span class="pill ${cls}">${s}</span><small>Platform ${tr.pl} · ${live?(tr.state==='dwell'?`${Math.ceil(tr.dw-tr.dt)} s left`:tr.state==='approach'?`${fmtDur(etaOf(tr))} away`:`left ${hm(tr.depAt)}`):`due ${hm(tr.sched)}`}</small></span><span class="chev">${I.chev}</span>`; }
+
+let TAB='trains';
+function renderList(){ const tr=TRAINS.filter(t=>t.state!=='depart'||t.s<STOP+260), q=[...PL[1].queue,...PL[2].queue];
+  const facOk=FAC.filter(f=>f.ok).length;
+  $('seg').innerHTML=[['platforms','Platforms',`${busyPl()}/2`],['trains','Trains',tr.length+q.length],['facilities','Facilities',`${facOk}/${FAC.length}`]].map(([k,l,n])=>`<button role="tab" data-tab="${k}" aria-selected="${TAB===k}">${l}<span>${n}</span></button>`).join('');
+  let h='';
+  if(TAB==='trains'){ const rows=[...tr.map(t=>({t,live:true,k:t.state==='depart'?-1e6+t.s:t.state==='dwell'?-1e5:etaOf(t)})),...q.map(x=>({t:x,live:false,k:x.sched-SIM.t+1e3}))].sort((a,b)=>a.k-b.k);
+    h=rows.map(({t,live})=>{ const [s,c]=live?trainStatus(t):['En route','']; const prog=live?(t.state==='dwell'?`<div class="bar"><i class="g" style="width:${pct(t.dt/t.dw)}%"></i></div>${dwellPhase(t)+1}/4`:t.state==='approach'?`<div class="bar"><i style="width:${pct(t.s/STOP)}%"></i></div>${fmtDur(etaOf(t))}`:'departed'):`due ${hm(t.sched)}`;
+      const loc=live?(t.state==='depart'?`→ ${STNS[t.pl][3][1]}`:`KJ24 · Platform ${t.pl}`):`${STNS[t.pl][1][1]} → KJ24`;
+      return `<div class="lr${SEL.kind==='train'&&SEL.id===t.id?' sel':''}" data-sel="train:${t.id}"><span><b>${t.id}</b><small>to ${PL[t.pl].to}</small></span><span class="loc"><i style="background:${t.pl===1?'#2F54EB':'#E0115F'}"></i>${loc}</span><span><span class="pill ${c}">${s}</span></span><span class="pr">${prog}</span></div>`; }).join(''); }
+  else if(TAB==='platforms'){ h=[1,2].map(k=>{ const p=PL[k]; const [cw,cc]=crowd(p.wait); const t=TRAINS.find(x=>x.pl===k&&x.state==='dwell');
+      return `<div class="lr${SEL.kind==='platform'&&SEL.id===k?' sel':''}" data-sel="platform:${k}"><span><b>Platform ${k}</b><small>to ${p.to}</small></span><span class="loc"><i style="background:${t?'#22C55E':'#C9CFDD'}"></i>${t?`${t.id} boarding`:'No train'}</span><span><span class="pill ${cc}">${cw}</span></span><span class="pr"><div class="bar"><i class="${cc==='ok'?'g':cc==='warn'?'a':'r'}" style="width:${pct(p.wait/400)}%"></i></div>${fmtN(p.wait)} waiting</span></div>`; }).join(''); }
+  else { h=FAC.filter(f=>f.type==='esc'||f.type==='lift'||!f.ok).map(f=>`<div class="lr" data-sel="concourse"><span><b>${f.id}</b><small>${f.type==='esc'?'Escalator':f.type==='lift'?'Lift':f.type==='gate'?'Fare gate':'Machine'}</small></span><span class="loc"><i style="background:${f.ok?'#22C55E':'#F59E0B'}"></i>${f.where}</span><span><span class="pill ${f.ok?'ok':'warn'}">${f.ok?'Running':'Out'}</span></span><span class="pr">${f.ok?'':esc(f.note)}</span></div>`).join('')
+      +`<div class="lr" data-sel="concourse"><span><b>Gates</b><small>Fare gates</small></span><span class="loc"><i style="background:#22C55E"></i>Paid area</span><span><span class="pill ok">${facCount('gate').join('/')}</span></span><span class="pr"></span></div>`; }
+  $('rows').innerHTML=h; }
+
+const KPI_HIST=[]; let lastK=0;
+function renderKPIs(){ const n=inStation(); KPI_HIST.push([SIM.t,n]); while(KPI_HIST.length&&SIM.t-KPI_HIST[0][0]>300) KPI_HIST.shift();
+  const dn=n-KPI_HIST[0][1]; $('kv1').textContent=fmtN(n); $('kd1').textContent=`${dn>=0?'↑':'↓'} ${fmtN(Math.abs(dn))}`; $('kd1').className='d'+(dn<0?' down':'');
+  const th=trainsInHour(SIM.t), tp=trainsInHour(SIM.t-3600); $('kv2').textContent=th; $('kd2').textContent=`${th>=tp?'↑':'↓'} ${Math.abs(th-tp)}`; $('kd2').className='d'+(th<tp?' down':'');
+  const ot=(BASE.ok+STATS.ok)/Math.max(1,BASE.arr+STATS.arr); $('kv3').textContent=`${(ot*100).toFixed(1)}%`; const dd=(ot-.98)*100; $('kd3').textContent=`${dd>=0?'↑':'↓'} ${Math.abs(dd).toFixed(1)}%`; $('kd3').className='d'+(dd<0?' down':'');
+  $('siteSub').textContent=`${pct(n/CAP_STN)}% capacity · ${busyPl()}/2 platforms busy`;
+  $('clock').textContent=`Live ${HMS.format(new Date(WALL0+SIM.t*1000))}`;
+  const al=alerts(); $('bellN').hidden=!al.length; $('bellN').textContent=al.length; if(!$('alertPop').hidden) renderAlerts(); }
+function renderAlerts(){ const a=alerts(); $('alertPop').innerHTML=`<div class="hd">Alerts</div>`+(a.length?a.map(x=>`<div class="alert"><i style="background:${x.c}"></i><b>${esc(x.t)}</b><span>${esc(x.s)}</span></div>`).join(''):`<div class="alert"><span>No active alerts</span></div>`); }
+let lastPanel='';
+function renderUI(force){ const p=panelHTML(); if(force||p!==lastPanel){ const sc=$('panel').scrollTop; $('panel').innerHTML=p; $('panel').scrollTop=sc; lastPanel=p; } renderTracker(); renderList(); renderKPIs(); }
+
+// events
+document.addEventListener('click',e=>{
+  const s=e.target.closest('[data-sel]'); if(s){ const [kind,id]=s.dataset.sel.split(':'); select(id===undefined?{kind}:{kind,id:kind==='platform'?+id:id}); return; }
+  if(e.target.closest('[data-x]')){ select({kind:'station'}); return; }
+  if(e.target.closest('[data-follow]')){ FOLLOW=!FOLLOW; renderUI(true); return; }
+  const t=e.target.closest('[data-tab]'); if(t){ TAB=t.dataset.tab; renderList(); return; }
+  if(!e.target.closest('.pop,#siteBtn,#bellBtn,.search')) closePops(); });
+function closePops(){ for(const id of ['sitePop','alertPop','qres']) $(id).hidden=true; }
+const SITE_ITEMS=[[{kind:'station'},'Station overview','KJ24 Kelana Jaya'],[{kind:'platform',id:1},'Platform 1','to Gombak'],[{kind:'platform',id:2},'Platform 2','to Putra Heights'],[{kind:'concourse'},'Concourse & entrances','Entrances A · B'],[{kind:'bushub'},'Feeder bus hub','4 bays'],[{kind:'carpark'},'Park & Ride','Multi-storey + surface']];
+$('siteBtn').onclick=e=>{ e.stopPropagation(); const p=$('sitePop'); const open=p.hidden; closePops(); if(!open) return;
+  p.innerHTML='<div class="hd">Kelana Jaya station</div>'+SITE_ITEMS.map(([s,l,sub])=>`<button class="it${sameSel(s,SEL)?' on':''}" data-sel="${s.kind}${s.id?':'+s.id:''}"><span><b>${l}</b><small>${sub}</small></span></button>`).join('')+'<div class="hd">Data shown is simulated</div>'; p.hidden=false; };
+$('bellBtn').onclick=e=>{ e.stopPropagation(); const open=$('alertPop').hidden; closePops(); if(open){ renderAlerts(); $('alertPop').hidden=false; } };
+function searchItems(q){ q=q.trim().toLowerCase(); if(!q) return [];
+  const all=[...TRAINS.map(t=>[`train:${t.id}`,t.id,`to ${PL[t.pl].to} · ${trainStatus(t)[0]}`]),...[...PL[1].queue,...PL[2].queue].map(t=>[`train:${t.id}`,t.id,`to ${PL[t.pl].to} · en route`]),
+    ...SITE_ITEMS.map(([s,l,sub])=>[`${s.kind}${s.id?':'+s.id:''}`,l,sub]),...FAC.filter(f=>f.type==='esc'||f.type==='lift').map(f=>['concourse',f.name,f.where]),...BUSES.map(b=>[b.state==='off'?'bushub':`bus:${b.id}`,`${b.id} ${b.name}`,'Feeder bus'])];
+  return all.filter(([,a,b])=>(a+' '+b).toLowerCase().includes(q)).slice(0,10); }
+$('q').addEventListener('input',()=>{ const r=searchItems($('q').value); const box=$('qres'); box.innerHTML=r.length?r.map(([s,a,b])=>`<button class="it" data-sel="${s}"><span><b>${esc(a)}</b><small>${esc(b)}</small></span></button>`).join(''):`<div class="it"><small>No matches</small></div>`; box.hidden=!$('q').value.trim(); });
+$('q').addEventListener('keydown',e=>{ if(e.key==='Enter'){ const r=searchItems($('q').value); if(r[0]){ $('qres').querySelector('[data-sel]').click(); $('q').value=''; $('q').blur(); } } if(e.key==='Escape'){ $('q').value=''; closePops(); $('q').blur(); } });
+addEventListener('keydown',e=>{ if(e.key==='/'&&document.activeElement!==$('q')){ e.preventDefault(); $('q').focus(); } if(e.key==='Escape') closePops(); });
+$('zIn').onclick=()=>{ const s=sph(); flyTo(controls.target.toArray(),Math.max(controls.minDistance,s.r*.7),null,null,.5); };
+$('zOut').onclick=()=>{ const s=sph(); flyTo(controls.target.toArray(),Math.min(controls.maxDistance,s.r/.7),null,null,.5); };
+$('rL').onclick=()=>{ const s=sph(); flyTo(controls.target.toArray(),s.r,s.az-Math.PI/4,null,.7); };
+$('rR').onclick=()=>{ const s=sph(); flyTo(controls.target.toArray(),s.r,s.az+Math.PI/4,null,.7); };
+$('home').onclick=()=>{ select({kind:'station'},{move:false}); flyTo(HOME.t,HOME.r,HOME.az,HOME.pol); };
+controls.autoRotateSpeed=.8;
+$('cine').onclick=()=>{ controls.autoRotate=!controls.autoRotate; $('cine').setAttribute('aria-pressed',controls.autoRotate); if(controls.autoRotate){ select({kind:'station'},{move:false}); const s=sph(); flyTo(HOME.t,HOME.r,s.az,.9,1.2); } };
+
+/* =====================================================================
+   FRAME LOOP
+   ===================================================================== */
+const _o={}, _c=new THREE.Vector3(), _b=new THREE.Box3(), _prev=new THREE.Vector3();
+let last=performance.now(), uiT=0, roofOp=1;
+function frame(now){
+  const dt=Math.min(.1,(now-last)/1000); last=now;
+  const steps=Math.ceil(dt/.05); for(let i=0;i<steps;i++) simStep(dt/steps);
+
+  // trains
+  for(const tr of TRAINS){ const g=tr.obj.g, p=PL[tr.pl]; g.position.set(trainX(tr),DECK+.42,TRACK_Z[tr.pl]); g.rotation.y=p.dir>0?0:Math.PI;
+    const open=tr.state==='dwell'?clamp(Math.min(tr.dt/2,(tr.dw-tr.dt-1)/2),0,1):0;
+    for(const l of tr.obj.leaves) l.position.x=l.userData.x0+l.userData.s*open*.72; }
+  for(const b of BUSES) placeBus(b);
+  // parked cars by occupancy
+  const o=carOcc(hourOf(SIM.t)); const nPark=Math.round(o*SPACES.length); PARKED.b.count=PARKED.c.count=SPACES.length;
+  SPACES.order.forEach((si,rank)=>{ const s=SPACES[si]; if(s.vis!==(rank<nPark)){ s.vis=rank<nPark; _m.makeScale(s.vis?1:0,s.vis?1:0,s.vis?1:0).setPosition(s.x,s.y,s.z); if(s.vis){ _q.setFromEuler(_e.set(0,s.yaw,0)); _m.compose(_p.set(s.x,s.y,s.z),_q,_s.set(1,1,1)); } PARKED.b.setMatrixAt(si,_m); PARKED.c.setMatrixAt(si,_m); PARKED.b.instanceMatrix.needsUpdate=PARKED.c.instanceMatrix.needsUpdate=true; } });
+  for(const p of PINS){ p.position.y=p.userData.y+Math.sin(now/500+p.position.x)*.35; p.rotation.y+=dt*.6; }
+
+  // camera: fly animation, follow
+  if(fly){ fly.k=Math.min(1,fly.k+dt/fly.dur); const e=ease(fly.k); const t=_c.lerpVectors(fly.t0,fly.t1,e); const r=lerp(fly.r0,fly.r1,e), az=lerp(fly.a0,fly.a1,e), pol=lerp(fly.p0,fly.p1,e); placeCam(t.toArray(),r,az,pol); if(fly.k>=1) fly=null; }
+  if((SEL.kind==='train'||SEL.kind==='bus')&&FOLLOW&&!fly){ const b=selBox(SEL,_b); if(b){ b.getCenter(_c); _prev.set(_c.x-controls.target.x,0,_c.z-controls.target.z); controls.target.add(_prev); camera.position.add(_prev); } }
+  controls.update();
+  // a followed train that has left the map hands the view back to the station
+  if(SEL.kind==='train'&&!TRAINS.some(t=>t.id===SEL.id)&&![...PL[1].queue,...PL[2].queue].some(q=>q.id===SEL.id)){ select({kind:'station'},{move:false}); flyTo(HOME.t,HOME.r,HOME.az,HOME.pol); }
+  if(SEL.kind==='bus'&&BUSES.find(b=>b.id===SEL.id)?.state==='off') select({kind:'bushub'});
+
+  // roof fades when looking closely at platform-level things
+  const want=(sph().r<200||SEL.kind==='platform'||SEL.kind==='train')?0:1; roofOp=lerp(roofOp,want,Math.min(1,dt*5)); roofMat.opacity=roofOp; roofMat.depthWrite=roofOp>.95; roof.visible=roofOp>.03; roof.castShadow=roofOp>.5;
+
+  // shadows follow the view
+  const tg=controls.target; const sx=Math.round(tg.x/20)*20, sz=Math.round(tg.z/20)*20; sun.target.position.set(sx,0,sz); sun.position.set(sx+SUN_OFF.x,SUN_OFF.y,sz+SUN_OFF.z);
+
+  // selection visuals
+  const sb_=selBox(SEL,_b);
+  if(sb_&&SEL.kind!=='station'){ bracket.visible=glow.visible=true; setBracket(sb_); const sz2=sb_.getSize(_v); glow.scale.set(sz2.x+2,sz2.z+2,1); glow.position.set((sb_.min.x+sb_.max.x)/2,sb_.min.y+.08,(sb_.min.z+sb_.max.z)/2);
+    const [a,b]=nameOf(SEL); selChip.element.innerHTML=`${esc(a)} <span>${esc(b)}</span>`; selChip.position.set((sb_.min.x+sb_.max.x)/2,sb_.max.y+.5,(sb_.min.z+sb_.max.z)/2); selChip.visible=true; }
+  else { bracket.visible=glow.visible=false; selChip.visible=false; }
+  const hb=hov&&!sameSel(hov,SEL)?selBox(hov,new THREE.Box3()):null;
+  if(hb){ const [a,b]=nameOf(hov); hovChip.element.innerHTML=`${esc(a)} <span>${esc(b)}</span>`; hovChip.position.set((hb.min.x+hb.max.x)/2,hb.max.y+.5,(hb.min.z+hb.max.z)/2); hovChip.visible=true; } else hovChip.visible=false;
+
+  renderer.render(scene,camera);
+  renderer.autoClear=false; renderer.clearDepth(); renderer.render(overlay,camera); renderer.autoClear=true;
+  labels.render(scene,camera);
+  uiT+=dt; if(uiT>.25){ uiT=0; renderUI(false); }
+  requestAnimationFrame(frame);
+}
+addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); labels.setSize(innerWidth,innerHeight); bMat.resolution.set(innerWidth,innerHeight); });
+renderUI(true);
+requestAnimationFrame(t=>{ last=t; frame(t); setTimeout(()=>{ $('loader').style.opacity=0; setTimeout(()=>$('loader').remove(),400); },150); });
+</script>
+</body>
+</html>
